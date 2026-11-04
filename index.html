@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PastureLedger — Small Farm Record Keeper</title>
+<style>
+  :root{
+    --bg:#f5f3ec; --card:#ffffff; --ink:#243020; --muted:#6d7462;
+    --green:#386641; --green-d:#2b4c31; --accent:#bc6c25; --line:#ddd6c2;
+    --red:#9d3b3b; --chip:#eef2e4; --th:#e9efe0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.45}
+  header{background:var(--green-d);color:#fff;padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  header .brand{font-size:22px;font-weight:700;letter-spacing:.3px}
+  header .brand span{color:#f2c879}
+  header .farmline{font-size:13px;opacity:.9}
+  header .yearbox{display:flex;align-items:center;gap:8px;font-size:14px}
+  header select{font-size:15px;padding:5px 8px;border-radius:6px;border:none}
+  nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px;background:#e9efe0;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  nav button{border:1px solid var(--line);background:#fff;padding:8px 14px;border-radius:20px;font-size:15px;cursor:pointer}
+  nav button.active{background:var(--green);color:#fff;border-color:var(--green)}
+  main{max-width:1060px;margin:0 auto;padding:16px 14px 50px}
+  .view{display:none}
+  .view.active{display:block}
+  h2{margin:6px 0 12px;font-size:21px}
+  h3{margin:20px 0 8px;font-size:17px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card .num{font-size:26px;font-weight:700;color:var(--green-d)}
+  .card .lbl{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:var(--chip);border:1px solid var(--line);border-radius:16px;padding:5px 12px;font-size:14px}
+  .chip b{color:var(--green-d)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+  form.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
+  input,select,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:7px;font-size:15px;background:#fff;color:var(--ink)}
+  textarea{resize:vertical}
+  .btn{background:var(--green);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-size:15px;cursor:pointer}
+  .btn:hover{background:var(--green-d)}
+  .btn-ghost{background:#fff;color:var(--green-d);border:1px solid var(--green);padding:7px 12px;border-radius:8px;font-size:14px;cursor:pointer}
+  .btn-danger{background:#fff;color:var(--red);border:1px solid var(--red);padding:7px 12px;border-radius:8px;font-size:14px;cursor:pointer}
+  .btn-small{padding:5px 10px;font-size:13px;border-radius:6px;min-height:40px;}
+  .tablewrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;background:#fff}
+  th{background:var(--th);text-align:left;padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
+  td{padding:8px;border-bottom:1px solid #eee8d8;vertical-align:top}
+  td.r,th.r{text-align:right}
+  tr.total td{font-weight:700;background:#f4f7ec;border-top:2px solid var(--green)}
+  .banner{background:#fdf3dd;border:1px solid #e5cf9a;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:14.5px}
+  .banner button{margin-left:10px}
+  .muted{color:var(--muted);font-size:13.5px}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .groupcard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+  .groupcard .top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline}
+  .groupcard .name{font-size:17px;font-weight:700}
+  .groupcard .meta{font-size:14px;color:var(--muted)}
+  .groupcard .count{font-size:22px;font-weight:700;color:var(--green-d)}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,30,18,.55);z-index:50;align-items:center;justify-content:center;padding:14px}
+  .modal-overlay.open{display:flex}
+  .modal{background:#fff;border-radius:12px;max-width:440px;width:100%;padding:20px;max-height:90vh;overflow-y:auto}
+  .modal h3{margin-top:0}
+  .modal .field{margin-bottom:11px}
+  .modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+  footer{max-width:1060px;margin:0 auto;padding:0 14px 30px;color:var(--muted);font-size:13px}
+  .kbd-note{background:#f4f7ec;border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:14px;margin-bottom:14px}
+  .helpTopics details{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-bottom:10px}
+  .helpTopics summary{font-size:16px;font-weight:700;color:var(--green-d);cursor:pointer;min-height:40px}
+  .helpTopics details p{margin:8px 0 4px}
+  #helpEmailBtn{display:inline-block;text-decoration:none;text-align:center;min-height:48px;line-height:28px}
+  @media print{
+    header nav .no-print, .btn, .btn-ghost, .btn-danger, form, .banner{display:none !important}
+    body{background:#fff}
+    main{max-width:none}
+    .panel,.card{border:none;padding:4px 0}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="brand">Pasture<span>Ledger</span></div>
+    <div class="farmline" id="farmLine">Small-farm record keeper</div>
+  </div>
+  <div class="yearbox">
+    <label for="yearSelect" style="color:#fff;margin:0">Tax year</label>
+    <select id="yearSelect"></select>
+  </div>
+</header>
+<div style="text-align:center;padding:12px 16px;background:#fff8e6;border-bottom:2px solid #e8a13a;"><a href="https://travisbriggs.gumroad.com/l/sbdqko" target="_blank" rel="noopener" style="display:inline-block;background:#e8a13a;color:#1d2b2e;font-weight:800;font-size:17px;padding:10px 22px;border-radius:8px;text-decoration:none;">Get the full version — $54</a></div>
+
+
+<nav id="tabBar">
+  <button data-view="dashboard" class="active">Dashboard</button>
+  <button data-view="livestock">Livestock</button>
+  <button data-view="money">Money Log</button>
+  <button data-view="sales">Sales</button>
+  <button data-view="schedulef">Schedule F</button>
+  <button data-view="settings">Settings</button>
+  <button data-view="help">Help</button>
+</nav>
+
+<main>
+  <div id="demoBanner" class="banner" style="display:none">
+    <b>Demo data:</b> you're looking at a sample farm so you can see how everything works.
+    <button class="btn-ghost btn-small" onclick="clearDemo()">Clear demo data</button>
+  </div>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="view-dashboard" class="view active">
+    <h2>Dashboard</h2>
+    <div class="cards" id="dashCards"></div>
+    <h3>Animals on the farm</h3>
+    <div class="chips" id="dashSpecies"></div>
+    <h3>This year's money by month</h3>
+    <div class="panel tablewrap"><table id="dashMonths"></table></div>
+    <h3>Recent activity</h3>
+    <div class="panel" id="dashRecent"></div>
+  </section>
+
+  <!-- ============ LIVESTOCK ============ -->
+  <section id="view-livestock" class="view">
+    <h2>Livestock groups</h2>
+    <div class="panel">
+      <h3 style="margin-top:0">Add a group</h3>
+      <form class="grid" id="groupForm">
+        <div><label>Species</label>
+          <select id="gSpecies">
+            <option>Cattle</option><option>Pigs</option><option>Goats</option><option>Sheep</option>
+            <option>Chickens</option><option>Turkeys</option><option>Ducks</option><option>Other</option>
+          </select></div>
+        <div><label>Group name</label><input id="gName" required placeholder="e.g. Angus cow herd"></div>
+        <div><label>Head count</label><input inputmode="decimal" id="gCount" type="number" min="0" step="1" required value="0"></div>
+        <div><label>Paddock / field</label><input id="gPaddock" placeholder="e.g. North 10"></div>
+        <div><label>Date in</label><input id="gDateIn" type="date" required></div>
+        <div><button class="btn" type="submit">Add group</button></div>
+      </form>
+    </div>
+    <div id="groupList"></div>
+    <h3>Movement log (rotations)</h3>
+    <div class="panel tablewrap"><table id="moveTable"></table></div>
+    <h3>Count changes (births, purchases, deaths, sales)</h3>
+    <div class="panel tablewrap"><table id="adjTable"></table></div>
+  </section>
+
+  <!-- ============ MONEY ============ -->
+  <section id="view-money" class="view">
+    <h2>Money log</h2>
+    <div class="kbd-note">Every category is pre-mapped to its IRS Schedule F line — pick the category and PastureLedger files it for your year-end summary. Sales from the <b>Sales</b> tab count as income automatically, so don't enter them here twice.</div>
+    <div class="panel">
+      <h3 style="margin-top:0">Add an entry</h3>
+      <form class="grid" id="moneyForm">
+        <div><label>Date</label><input id="mDate" type="date" required></div>
+        <div><label>Type</label>
+          <select id="mType"><option value="expense">Expense</option><option value="income">Income</option></select></div>
+        <div><label>Category (Schedule F)</label><select id="mCategory"></select></div>
+        <div><label>Amount ($)</label><input inputmode="decimal" id="mAmount" type="number" min="0.01" step="0.01" required placeholder="0.00"></div>
+        <div><label>Note</label><input id="mNote" placeholder="What was it?"></div>
+        <div><button class="btn" type="submit">Add entry</button></div>
+      </form>
+    </div>
+    <div class="cards" id="moneyCards"></div>
+    <div class="panel tablewrap"><table id="moneyTable"></table></div>
+  </section>
+
+  <!-- ============ SALES ============ -->
+  <section id="view-sales" class="view">
+    <h2>Sales log</h2>
+    <div class="kbd-note">Log what you sold — eggs, whole chickens, beef, pork, live animals. Sales totals flow into the Dashboard and the Schedule F summary (Line 2, products you raised) automatically.</div>
+    <div class="panel">
+      <h3 style="margin-top:0">Add a sale</h3>
+      <form class="grid" id="salesForm">
+        <div><label>Date</label><input id="sDate" type="date" required></div>
+        <div><label>Product</label><input id="sProduct" list="productList" required placeholder="e.g. Eggs">
+          <datalist id="productList">
+            <option>Eggs</option><option>Whole chicken</option><option>Beef</option><option>Pork</option>
+            <option>Goat</option><option>Turkey</option><option>Live animal</option><option>Milk</option>
+            <option>Honey</option><option>Hay</option><option>Produce</option>
+          </datalist></div>
+        <div><label>Quantity</label><input inputmode="decimal" id="sQty" type="number" min="0.01" step="0.01" required></div>
+        <div><label>Unit</label><input id="sUnit" list="unitList" required placeholder="dozen">
+          <datalist id="unitList">
+            <option>each</option><option>dozen</option><option>lb</option><option>head</option>
+            <option>gallon</option><option>flat</option><option>case</option>
+          </datalist></div>
+        <div><label>Price per unit ($)</label><input inputmode="decimal" id="sPrice" type="number" min="0" step="0.01" required placeholder="0.00"></div>
+        <div><button class="btn" type="submit">Add sale</button></div>
+      </form>
+    </div>
+    <div class="cards" id="salesCards"></div>
+    <div class="panel tablewrap"><table id="salesTable"></table></div>
+  </section>
+
+  <!-- ============ SCHEDULE F ============ -->
+  <section id="view-schedulef" class="view">
+    <h2>Schedule F summary — <span id="sfYear"></span></h2>
+    <div class="kbd-note">Totals grouped by IRS Schedule F category for the selected tax year, built from your Money Log and Sales. This is a planning summary to hand to your tax preparer — it is not a tax filing.</div>
+    <div class="no-print" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="window.print()">Print summary</button>
+      <button class="btn-ghost" onclick="exportMoneyCSV()">Download money log (CSV)</button>
+      <button class="btn-ghost" onclick="exportSalesCSV()">Download sales log (CSV)</button>
+    </div>
+    <div class="panel" id="sfBody"></div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="view-settings" class="view">
+    <h2>Settings &amp; your data</h2>
+    <div class="panel">
+      <h3 style="margin-top:0">Farm settings</h3>
+      <form class="grid" id="settingsForm">
+        <div><label>Farm name</label><input id="setFarmName" placeholder="e.g. God's Gift Farm"></div>
+        <div><label>Owner / operator</label><input id="setOwner" placeholder="Your name"></div>
+        <div><label>Tax year</label><select id="setTaxYear"></select></div>
+        <div><button class="btn" type="submit">Save settings</button></div>
+      </form>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Backup</h3>
+      <p class="muted">Your records live in this browser on this device (localStorage) — nothing is uploaded anywhere. Download a backup file regularly, and import it here if you move to a new device or browser.</p>
+      <div class="actions">
+        <button class="btn-ghost" onclick="exportBackup()">Download backup (JSON)</button>
+        <label class="btn-ghost" style="cursor:pointer;margin:0">Import backup<input type="file" id="importFile" accept=".json,application/json" style="display:none"></label>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Start over</h3>
+      <div class="actions">
+        <button class="btn-ghost" onclick="loadDemo()">Load demo data</button>
+        <button class="btn-danger" onclick="eraseAll()">Erase all data</button>
+      </div>
+      <p class="muted">Erasing removes every group, entry, and sale stored in this browser. Download a backup first if there's anything you want to keep.</p>
+    </div>
+  </section>
+
+  <!-- ============ HELP ============ -->
+  <section id="view-help" class="view">
+    <h2>Help &amp; support</h2>
+    <p>New to PastureLedger, or stuck on something? Start with these short how-tos — they cover the jobs this app is used for every day. Tap a topic to open it.</p>
+    <div class="helpTopics">
+      <details id="helpTopicLivestock">
+        <summary>Add livestock groups and keep counts true</summary>
+        <p>Open the <b>Livestock</b> tab and fill in <b>Add a group</b>: pick the species, give the group a name, enter the head count and the paddock or field it is in, set the date in, then tap <b>Add group</b>. After that, use the buttons on each group card: <b>Move group</b> records a rotation to a new paddock, and <b>Births / purchases / deaths / sales</b> changes the head count — every move and count change is kept in the logs below the groups, where you can edit or delete an entry if you made a mistake.</p>
+      </details>
+      <details id="helpTopicMoney">
+        <summary>Log money in and money out</summary>
+        <p>Open the <b>Money Log</b> tab, set the date, choose <b>Expense</b> or <b>Income</b>, and pick a category — every category is already mapped to its IRS Schedule F line, which is shown next to it. Enter the amount and a short note about what it was, then tap <b>Add entry</b>. Don't enter sales here: sales logged in the Sales tab already count as income automatically, so entering them twice would double-count them.</p>
+      </details>
+      <details id="helpTopicSales">
+        <summary>Log a sale</summary>
+        <p>Open the <b>Sales</b> tab and fill in <b>Add a sale</b>: the date, what you sold (eggs, whole chickens, beef, pork, live animals, and more), the quantity, the unit (dozen, each, lb, head…), and the price per unit, then tap <b>Add sale</b>. PastureLedger works out the total for you, and sales totals flow into the Dashboard and the Schedule F summary (Line 2, products you raised) on their own.</p>
+      </details>
+      <details id="helpTopicDashboard">
+        <summary>Read the Dashboard</summary>
+        <p>The <b>Dashboard</b> tab shows the whole farm at a glance: total head and livestock groups, income, expenses, and net for this month and for the year, a month-by-month money table, and your most recent activity. Use the <b>Tax year</b> picker at the top of the screen to switch the year these figures — and the Schedule F summary — are shown for.</p>
+      </details>
+      <details id="helpTopicScheduleF">
+        <summary>Get your Schedule F summary and exports</summary>
+        <p>Open the <b>Schedule F</b> tab to see your Money Log and Sales totals grouped by IRS Schedule F line for the selected tax year, with gross income, total expenses, and net farm profit. Tap <b>Print summary</b> to print it for your tax preparer, or <b>Download money log (CSV)</b> / <b>Download sales log (CSV)</b> to save either log as a spreadsheet file. This is a planning summary to hand to your tax preparer — it is not a tax filing.</p>
+      </details>
+      <details id="helpTopicVoice">
+        <summary>Enter records by voice</summary>
+        <p>Most fields in PastureLedger have a <b>🎤 mic button</b> beside them. Tap it once and speak — the words land in the field just as if you had typed them, and nothing is saved until you tap the usual save/add button. Numbers can be spoken naturally ("forty two head", "twelve hundred dollars"). Voice entry needs a browser/device that supports speech recognition (it works on the hosted and Google Play editions); where it isn't available, the mic shows a short note and typing works as always.</p>
+      </details>
+      <details id="helpTopicBackup">
+        <summary>Back up your data and move it to a new device</summary>
+        <p>Open the <b>Settings</b> tab. Under <b>Backup</b>, tap <b>Download backup (JSON)</b> to save a backup file of everything, and keep that file somewhere safe. On a new device or in a new browser, open the same place and use <b>Import backup</b> to bring your records back. Your farm name, owner, and tax year are also set in Settings.</p>
+      </details>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Your data stays on this device</h3>
+      <p>Your records live in this browser on this device (localStorage) — nothing is uploaded anywhere. Back them up regularly: in <b>Settings</b>, tap <b>Download backup (JSON)</b>, and import that same file in Settings if you move to a new device or browser.</p>
+      <h3>Email us for help</h3>
+      <p><a id="helpEmailBtn" class="btn" href="mailto:whitewolfbackoffice@gmail.com?subject=PastureLedger%20help%20%E2%80%94%20v1.1&amp;body=Tell%20us%20what%20you%20were%20trying%20to%20do%20and%20what%20happened%3A%0A%0A">✉️ Email us</a></p>
+      <p class="muted">The button opens your own mail app with our address and the app version already filled in — nothing is sent until you press send there.</p>
+      <p class="muted" id="helpVersionLine">PastureLedger v1.1</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  PastureLedger — built for small farms and homesteads running rotational grazing. Your data never leaves this device.
+  Schedule F line references follow the IRS Schedule F (Form 1040); always confirm figures with your tax preparer before filing.
+</footer>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div class="row">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="modalSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   PURE LOGIC — no DOM access in this block. Category definitions carry
+   the IRS Schedule F mapping (part + line) in the data model itself.
+   ===================================================================== */
+const EXPENSE_CATEGORIES = [
+  { key:'feed',                label:'Feed purchased',                          part:'II', line:'16' },
+  { key:'livestock_purchased', label:'Livestock purchased for resale',          part:'I',  line:'1'  },
+  { key:'vet',                 label:'Veterinary, breeding & medicine',         part:'II', line:'31' },
+  { key:'supplies',            label:'Supplies purchased',                      part:'II', line:'28' },
+  { key:'fuel',                label:'Gasoline, fuel & oil',                    part:'II', line:'19' },
+  { key:'repairs',             label:'Repairs & maintenance',                   part:'II', line:'25' },
+  { key:'seeds',               label:'Seeds & plants purchased',                part:'II', line:'26' },
+  { key:'fertilizer',          label:'Fertilizers & lime',                      part:'II', line:'17' },
+  { key:'chemicals',           label:'Chemicals',                               part:'II', line:'11' },
+  { key:'rent',                label:'Rent or lease',                           part:'II', line:'24' },
+  { key:'utilities',           label:'Utilities',                               part:'II', line:'30' },
+  { key:'custom_hire',         label:'Custom hire (machine work)',              part:'II', line:'13' },
+  { key:'labor',               label:'Labor hired',                             part:'II', line:'22' },
+  { key:'insurance',           label:'Insurance (other than health)',           part:'II', line:'20' },
+  { key:'interest',            label:'Interest',                                part:'II', line:'21' },
+  { key:'property_taxes',      label:'Taxes',                                   part:'II', line:'29' },
+  { key:'other_expense',       label:'Other expenses',                          part:'II', line:'32' }
+];
+const INCOME_CATEGORIES = [
+  { key:'raised_sales',       label:'Livestock & products you raised — sales', part:'I', line:'2' },
+  { key:'resale_sales',       label:'Items bought for resale — sales',         part:'I', line:'1' },
+  { key:'ag_payments',        label:'Agricultural program payments',           part:'I', line:'4' },
+  { key:'custom_hire_income', label:'Custom hire (machine work) income',       part:'I', line:'7' },
+  { key:'other_income',       label:'Other income',                            part:'I', line:'8' }
+];
+const CATEGORY_INDEX = {};
+EXPENSE_CATEGORIES.concat(INCOME_CATEGORIES).forEach(function(c){ CATEGORY_INDEX[c.key] = c; });
+
+function categoryOf(key){
+  return CATEGORY_INDEX[key] || { key:key, label:key, part:'II', line:'32' };
+}
+function round2(n){ return Math.round((Number(n) + Number.EPSILON) * 100) / 100; }
+function yearOf(dateStr){ return parseInt(String(dateStr).slice(0,4), 10); }
+function monthOf(dateStr){ return String(dateStr).slice(0,7); }
+function saleTotal(s){ return round2(Number(s.qty) * Number(s.price)); }
+
+/* Schedule F summary for one tax year.
+   - Money-log income groups into Part I lines.
+   - Sales-log totals join Line 2 (products you raised).
+   - "Livestock purchased for resale" is a Part I cost (netted on Line 1),
+     NOT a Part II expense — matching how Schedule F actually works.
+   - Everything else expense-side groups into Part II lines. */
+function computeScheduleF(money, sales, year){
+  const inc = {}, exp = {};
+  (money || []).forEach(function(e){
+    if (yearOf(e.date) !== year) return;
+    if (e.type === 'income') inc[e.category] = round2((inc[e.category] || 0) + Number(e.amount));
+    else exp[e.category] = round2((exp[e.category] || 0) + Number(e.amount));
+  });
+  let salesT = 0;
+  (sales || []).forEach(function(s){ if (yearOf(s.date) === year) salesT = round2(salesT + saleTotal(s)); });
+  if (salesT) inc['raised_sales'] = round2((inc['raised_sales'] || 0) + salesT);
+
+  const partI = [];
+  const line1Sales = inc['resale_sales'] || 0;
+  const line1Cost  = exp['livestock_purchased'] || 0;
+  if (line1Sales) partI.push({ line:'1', label:'Sales of items bought for resale', amount: line1Sales });
+  if (line1Cost)  partI.push({ line:'1', label:'Less: cost of items bought for resale', amount: -line1Cost });
+  ['raised_sales','ag_payments','custom_hire_income','other_income'].forEach(function(k){
+    if (inc[k]) partI.push({ line: CATEGORY_INDEX[k].line, label: CATEGORY_INDEX[k].label, amount: inc[k] });
+  });
+  partI.sort(function(a,b){ return parseInt(a.line,10) - parseInt(b.line,10); });
+  const grossIncome = round2(partI.reduce(function(a,l){ return a + l.amount; }, 0));
+
+  const partII = [];
+  EXPENSE_CATEGORIES.forEach(function(c){
+    if (c.part === 'II' && exp[c.key]) partII.push({ line: c.line, label: c.label, amount: exp[c.key] });
+  });
+  partII.sort(function(a,b){ return parseInt(a.line,10) - parseInt(b.line,10); });
+  const totalExpenses = round2(partII.reduce(function(a,l){ return a + l.amount; }, 0));
+
+  return { partI: partI, grossIncome: grossIncome, partII: partII,
+           totalExpenses: totalExpenses, net: round2(grossIncome - totalExpenses), salesTotal: salesT };
+}
+
+/* Cash view: money in vs money out (sales count as money in;
+   livestock purchased counts as money out) for YTD and one month. */
+function computeCash(money, sales, year, curMonth){
+  let yi = 0, yo = 0, mi = 0, mo = 0;
+  (money || []).forEach(function(e){
+    const a = Number(e.amount);
+    if (yearOf(e.date) === year){ if (e.type === 'income') yi += a; else yo += a; }
+    if (monthOf(e.date) === curMonth){ if (e.type === 'income') mi += a; else mo += a; }
+  });
+  (sales || []).forEach(function(s){
+    const t = saleTotal(s);
+    if (yearOf(s.date) === year) yi += t;
+    if (monthOf(s.date) === curMonth) mi += t;
+  });
+  return { ytdIn: round2(yi), ytdOut: round2(yo), ytdNet: round2(yi - yo),
+           monthIn: round2(mi), monthOut: round2(mo), monthNet: round2(mi - mo) };
+}
+
+/* Monthly breakdown for a year: [{month:'2026-01', in:x, out:y}, ...] */
+function computeMonthly(money, sales, year){
+  const rows = [];
+  for (let m = 1; m <= 12; m++){
+    const key = year + '-' + String(m).padStart(2,'0');
+    let inn = 0, out = 0;
+    (money || []).forEach(function(e){
+      if (monthOf(e.date) !== key) return;
+      if (e.type === 'income') inn += Number(e.amount); else out += Number(e.amount);
+    });
+    (sales || []).forEach(function(s){ if (monthOf(s.date) === key) inn += saleTotal(s); });
+    rows.push({ month: key, in: round2(inn), out: round2(out), net: round2(inn - out) });
+  }
+  return rows;
+}
+
+function csvCell(v){
+  const s = (v === null || v === undefined) ? '' : String(v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function moneyToCSV(money){
+  const rows = [['Date','Type','Category','Schedule F','Amount','Note']];
+  (money || []).slice().sort(function(a,b){ return a.date < b.date ? -1 : 1; }).forEach(function(e){
+    const c = categoryOf(e.category);
+    rows.push([e.date, e.type, c.label, 'Part ' + c.part + ' Line ' + c.line, Number(e.amount).toFixed(2), e.note || '']);
+  });
+  return rows.map(function(r){ return r.map(csvCell).join(','); }).join('\n');
+}
+function salesToCSV(sales){
+  const rows = [['Date','Product','Quantity','Unit','Price per unit','Total']];
+  (sales || []).slice().sort(function(a,b){ return a.date < b.date ? -1 : 1; }).forEach(function(s){
+    rows.push([s.date, s.product, s.qty, s.unit, Number(s.price).toFixed(2), saleTotal(s).toFixed(2)]);
+  });
+  return rows.map(function(r){ return r.map(csvCell).join(','); }).join('\n');
+}
+/* =================== END PURE LOGIC =================== */
+
+/* =================== STATE =================== */
+var APP_VERSION = "1.1";
+const STORE_KEY = 'pastureledger_v1';
+let uidCounter = 0;
+function uid(){ uidCounter++; return Date.now().toString(36) + uidCounter.toString(36) + Math.floor(Math.random()*9999).toString(36); }
+function currentYear(){ return new Date().getFullYear(); }
+function todayStr(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function currentMonthStr(){ return todayStr().slice(0,7); }
+
+function emptyState(){
+  return { settings: { farmName:'', owner:'', taxYear: currentYear() },
+           groups: [], movements: [], adjustments: [], money: [], sales: [], demo: false };
+}
+
+function demoState(){
+  const Y = currentYear();
+  const st = emptyState();
+  st.demo = true;
+  st.settings = { farmName:'Meadowbrook Farm', owner:'Demo Data', taxYear: Y };
+  const g = function(species,name,count,paddock,dateIn){ return { id: uid(), species:species, name:name, count:count, paddock:paddock, dateIn:dateIn }; };
+  st.groups = [
+    g('Cattle','Angus cow herd',24,'River bottom', Y+'-03-15'),
+    g('Cattle','Yearling steers',8,'Creek pasture', Y+'-04-02'),
+    g('Pigs','Berkshire grow-outs',12,'Oak pen', Y+'-05-10'),
+    g('Goats','Kiko does',15,'South brush', Y+'-03-28'),
+    g('Chickens','Laying hens',85,'Hoop coop A', Y+'-04-15'),
+    g('Chickens','Broilers — batch 3',120,'Hoop coop B', Y+'-09-05'),
+    g('Turkeys','Thanksgiving turkeys',40,'Turkey block', Y+'-05-20')
+  ];
+  const gid = function(name){ return st.groups.filter(function(x){ return x.name === name; })[0].id; };
+  st.movements = [
+    { id:uid(), groupId:gid('Angus cow herd'), groupName:'Angus cow herd', fromPaddock:'North 10', toPaddock:'Hill field', date:Y+'-05-01', note:'Spring rotation' },
+    { id:uid(), groupId:gid('Angus cow herd'), groupName:'Angus cow herd', fromPaddock:'Hill field', toPaddock:'River bottom', date:Y+'-08-02', note:'Moved to shade & water' },
+    { id:uid(), groupId:gid('Kiko does'), groupName:'Kiko does', fromPaddock:'Brush lot', toPaddock:'South brush', date:Y+'-06-10', note:'Fresh browse' }
+  ];
+  st.adjustments = [
+    { id:uid(), groupId:gid('Angus cow herd'), groupName:'Angus cow herd', type:'birth', qty:6, date:Y+'-04-18', note:'Spring calves' },
+    { id:uid(), groupId:gid('Angus cow herd'), groupName:'Angus cow herd', type:'death', qty:1, date:Y+'-06-03', note:'Older cow, bloat' },
+    { id:uid(), groupId:gid('Angus cow herd'), groupName:'Angus cow herd', type:'sale', qty:2, date:Y+'-09-12', note:'Sold live — see Sales log' },
+    { id:uid(), groupId:gid('Kiko does'), groupName:'Kiko does', type:'birth', qty:5, date:Y+'-05-14', note:'Kids on the ground' },
+    { id:uid(), groupId:gid('Laying hens'), groupName:'Laying hens', type:'death', qty:5, date:Y+'-07-19', note:'Heat stress losses' },
+    { id:uid(), groupId:gid('Broilers — batch 3'), groupName:'Broilers — batch 3', type:'sale', qty:30, date:Y+'-09-26', note:'First processing run — see Sales log' },
+    { id:uid(), groupId:gid('Berkshire grow-outs'), groupName:'Berkshire grow-outs', type:'sale', qty:2, date:Y+'-10-05', note:'Whole hogs sold' }
+  ];
+  const m = function(date,type,category,amount,note){ return { id:uid(), date:date, type:type, category:category, amount:amount, note:note }; };
+  st.money = [
+    m(Y+'-03-20','expense','feed',412.50,'Mineral & supplemental feed'),
+    m(Y+'-04-08','expense','livestock_purchased',2400.00,'12 Berkshire feeder pigs @ $200'),
+    m(Y+'-04-15','expense','livestock_purchased',540.00,'90 started pullets'),
+    m(Y+'-05-02','expense','seeds',189.00,'Clover & rye seed for overseeding'),
+    m(Y+'-05-03','expense','fertilizer',145.50,'Lime application'),
+    m(Y+'-05-20','expense','fuel',96.40,'Diesel for tractor'),
+    m(Y+'-06-11','expense','vet',210.00,'Herd health — vaccinations & preg check'),
+    m(Y+'-06-25','expense','repairs',154.99,'Fence charger repair'),
+    m(Y+'-06-30','income','ag_payments',750.00,'EQIP cost-share reimbursement'),
+    m(Y+'-07-08','expense','supplies',87.25,'Ear tags, buckets, waterers'),
+    m(Y+'-08-14','expense','utilities',63.18,'Stock water & electric'),
+    m(Y+'-08-22','income','custom_hire_income',300.00,'Brush hogging for neighbor'),
+    m(Y+'-09-05','expense','feed',388.20,'Broiler feed delivery'),
+    m(Y+'-09-18','expense','custom_hire',350.00,'Brush hogging lower field'),
+    m(Y+'-10-03','expense','rent',500.00,'October pasture lease — extra 20 acres'),
+    m(Y+'-10-10','expense','labor',240.00,'Weekend help — processing day')
+  ];
+  const s = function(date,product,qty,unit,price){ return { id:uid(), date:date, product:product, qty:qty, unit:unit, price:price }; };
+  st.sales = [
+    s(Y+'-05-09','Eggs',40,'dozen',5.00),
+    s(Y+'-06-13','Eggs',55,'dozen',5.00),
+    s(Y+'-07-11','Eggs',60,'dozen',5.50),
+    s(Y+'-07-25','Whole chicken',60,'each',24.00),
+    s(Y+'-08-08','Eggs',48,'dozen',5.50),
+    s(Y+'-09-12','Eggs',52,'dozen',5.50),
+    s(Y+'-09-12','Live animal',2,'head',1850.00),
+    s(Y+'-09-26','Whole chicken',30,'each',25.00),
+    s(Y+'-10-03','Eggs',45,'dozen',6.00),
+    s(Y+'-10-05','Pork',2,'head',650.00)
+  ];
+  return st;
+}
+
+/* Coerce anything loaded or imported into a safe, complete state:
+   missing arrays default to empty, numbers are forced numeric, so a
+   partial or hand-edited backup can never crash the app. */
+function sanitizeState(s){
+  const out = emptyState();
+  if (!s || typeof s !== 'object') return out;
+  if (s && s.legal && typeof s.legal === 'object') out.legal = { termsVersion: String(s.legal.termsVersion || ""), acceptedDate: String(s.legal.acceptedDate || ""), disclaimerShown: !!s.legal.disclaimerShown };
+  if (s.settings && typeof s.settings === 'object'){
+    out.settings.farmName = String(s.settings.farmName || '');
+    out.settings.owner = String(s.settings.owner || '');
+    const ty = parseInt(s.settings.taxYear, 10);
+    if (ty >= 1900 && ty <= 2200) out.settings.taxYear = ty;
+  }
+  ['groups','movements','adjustments','money','sales'].forEach(function(k){ if (Array.isArray(s[k])) out[k] = s[k]; });
+  out.groups = out.groups.filter(function(g){ return g && typeof g === 'object'; }).map(function(g){
+    return { id: g.id || uid(), species: String(g.species || 'Other'), name: String(g.name || 'Unnamed group'),
+             count: Math.max(0, Number(g.count) || 0), paddock: String(g.paddock || ''), dateIn: String(g.dateIn || todayStr()) };
+  });
+  out.money = out.money.filter(function(e){ return e && typeof e === 'object' && e.date; }).map(function(e){
+    return { id: e.id || uid(), date: String(e.date), type: e.type === 'income' ? 'income' : 'expense',
+             category: String(e.category || 'other_expense'), amount: Number(e.amount) || 0, note: String(e.note || '') };
+  });
+  out.sales = out.sales.filter(function(x){ return x && typeof x === 'object' && x.date; }).map(function(x){
+    return { id: x.id || uid(), date: String(x.date), product: String(x.product || ''),
+             qty: Number(x.qty) || 0, unit: String(x.unit || 'each'), price: Number(x.price) || 0 };
+  });
+  out.movements = out.movements.filter(function(x){ return x && typeof x === 'object'; });
+  out.adjustments = out.adjustments.filter(function(x){ return x && typeof x === 'object'; });
+  out.demo = !!s.demo;
+  return out;
+}
+
+function loadState(){
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw){ const parsed = JSON.parse(raw); if (parsed && parsed.settings) return sanitizeState(parsed); }
+  } catch(e){ /* corrupted storage falls through to demo seed */ }
+  const st = demoState();
+  saveState(st);
+  return st;
+}
+function saveState(st){ try { localStorage.setItem(STORE_KEY, JSON.stringify(st || state)); } catch(e){} }
+let state = loadState();
+
+/* =================== UI HELPERS =================== */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function fmtMoney(n){ const v = round2(n); return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US',{ minimumFractionDigits:2, maximumFractionDigits:2 }); }
+function fmtDate(dstr){
+  const p = String(dstr).split('-');
+  const mi = parseInt(p[1], 10), di = parseInt(p[2], 10);
+  if (p.length !== 3 || isNaN(mi) || mi < 1 || mi > 12 || isNaN(di) || di < 1 || di > 31) return esc(dstr);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[mi-1] + ' ' + di + ', ' + p[0];
+}
+function monthLabel(key){
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return months[parseInt(key.slice(5,7),10)-1] + ' ' + key.slice(0,4);
+}
+function downloadText(filename, text, mime){
+  const blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 200);
+}
+function byDateDesc(a,b){ return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); }
+
+/* =================== RENDER =================== */
+function renderHeader(){
+  const yrs = [];
+  const cy = currentYear();
+  for (let y = cy - 3; y <= cy + 1; y++) yrs.push(y);
+  if (yrs.indexOf(state.settings.taxYear) === -1) yrs.push(state.settings.taxYear);
+  yrs.sort();
+  const opts = yrs.map(function(y){ return '<option value="' + y + '"' + (y === state.settings.taxYear ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+  $('yearSelect').innerHTML = opts;
+  $('setTaxYear').innerHTML = opts;
+  const fl = [];
+  if (state.settings.farmName) fl.push(state.settings.farmName);
+  if (state.settings.owner) fl.push(state.settings.owner);
+  $('farmLine').textContent = fl.length ? fl.join(' — ') : 'Small-farm record keeper';
+  $('demoBanner').style.display = state.demo ? 'block' : 'none';
+  $('sfYear').textContent = state.settings.taxYear;
+}
+
+function renderDashboard(){
+  const year = state.settings.taxYear;
+  const cash = computeCash(state.money, state.sales, year, currentMonthStr());
+  const totalHead = state.groups.reduce(function(a,g){ return a + Number(g.count); }, 0);
+  $('dashCards').innerHTML =
+    '<div class="card"><div class="num">' + totalHead + '</div><div class="lbl">Total head</div></div>' +
+    '<div class="card"><div class="num">' + state.groups.length + '</div><div class="lbl">Livestock groups</div></div>' +
+    '<div class="card"><div class="num">' + fmtMoney(cash.monthIn) + '</div><div class="lbl">Income — ' + monthLabel(currentMonthStr()) + '</div></div>' +
+    '<div class="card"><div class="num">' + fmtMoney(cash.monthOut) + '</div><div class="lbl">Expenses — ' + monthLabel(currentMonthStr()) + '</div></div>' +
+    '<div class="card"><div class="num ' + (cash.monthNet < 0 ? 'neg' : 'pos') + '">' + fmtMoney(cash.monthNet) + '</div><div class="lbl">Net this month</div></div>' +
+    '<div class="card"><div class="num">' + fmtMoney(cash.ytdIn) + '</div><div class="lbl">Income YTD ' + year + '</div></div>' +
+    '<div class="card"><div class="num">' + fmtMoney(cash.ytdOut) + '</div><div class="lbl">Expenses YTD ' + year + '</div></div>' +
+    '<div class="card"><div class="num ' + (cash.ytdNet < 0 ? 'neg' : 'pos') + '">' + fmtMoney(cash.ytdNet) + '</div><div class="lbl">Net YTD ' + year + '</div></div>';
+  const bySpecies = {};
+  state.groups.forEach(function(g){ bySpecies[g.species] = (bySpecies[g.species] || 0) + Number(g.count); });
+  const keys = Object.keys(bySpecies).sort();
+  $('dashSpecies').innerHTML = keys.length
+    ? keys.map(function(k){ return '<span class="chip">' + esc(k) + ': <b>' + bySpecies[k] + '</b></span>'; }).join('')
+    : '<span class="muted">No livestock groups yet — add your first group in the Livestock tab.</span>';
+  const rows = computeMonthly(state.money, state.sales, year);
+  $('dashMonths').innerHTML = '<tr><th>Month</th><th class="r">Income</th><th class="r">Expenses</th><th class="r">Net</th></tr>' +
+    rows.map(function(r){ return '<tr><td>' + monthLabel(r.month) + '</td><td class="r">' + fmtMoney(r.in) + '</td><td class="r">' + fmtMoney(r.out) + '</td><td class="r ' + (r.net < 0 ? 'neg' : '') + '">' + fmtMoney(r.net) + '</td></tr>'; }).join('');
+  const recent = [];
+  state.money.forEach(function(e){ recent.push({ date:e.date, text:(e.type === 'income' ? 'Income' : 'Expense') + ' — ' + esc(categoryOf(e.category).label) + ' · ' + fmtMoney(e.amount) + (e.note ? ' · ' + esc(e.note) : '') }); });
+  state.sales.forEach(function(s){ recent.push({ date:s.date, text:'Sale — ' + esc(s.product) + ' · ' + s.qty + ' ' + esc(s.unit) + ' · ' + fmtMoney(saleTotal(s)) }); });
+  state.movements.forEach(function(mv){ recent.push({ date:mv.date, text:'Moved ' + esc(mv.groupName) + ' → ' + esc(mv.toPaddock) }); });
+  recent.sort(byDateDesc);
+  $('dashRecent').innerHTML = recent.length
+    ? recent.slice(0,8).map(function(r){ return '<div style="padding:5px 0;border-bottom:1px solid #f0ead6"><span class="muted">' + fmtDate(r.date) + '</span> &nbsp;' + r.text + '</div>'; }).join('')
+    : '<span class="muted">Nothing logged yet.</span>';
+}
+
+function renderLivestock(){
+  const list = $('groupList');
+  if (!state.groups.length){
+    list.innerHTML = '<div class="panel muted">No groups yet. Add your first herd, flock, or batch above.</div>';
+  } else {
+    list.innerHTML = state.groups.map(function(g){
+      return '<div class="groupcard"><div class="top"><div>' +
+        '<span class="name">' + esc(g.name) + '</span> <span class="meta">· ' + esc(g.species) + '</span><br>' +
+        '<span class="meta">Paddock: <b>' + esc(g.paddock || '—') + '</b> · In since ' + fmtDate(g.dateIn) + '</span></div>' +
+        '<div class="count">' + g.count + ' head</div></div>' +
+        '<div class="actions" style="margin-top:10px">' +
+        '<button class="btn-ghost btn-small" onclick="openMove(\'' + g.id + '\')">Move group</button>' +
+        '<button class="btn-ghost btn-small" onclick="openAdjust(\'' + g.id + '\')">Births / purchases / deaths / sales</button>' +
+        '<button class="btn-danger btn-small" onclick="deleteGroup(\'' + g.id + '\')">Delete group</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  const mv = state.movements.slice().sort(byDateDesc);
+  $('moveTable').innerHTML = '<tr><th>Date</th><th>Group</th><th>From</th><th>To</th><th>Note</th><th></th></tr>' +
+    (mv.length ? mv.map(function(x){ return '<tr><td>' + fmtDate(x.date) + '</td><td>' + esc(x.groupName) + '</td><td>' + esc(x.fromPaddock || '—') + '</td><td>' + esc(x.toPaddock) + '</td><td>' + esc(x.note || '') + '</td>' +
+      '<td><div class="actions"><button class="btn-ghost btn-small" onclick="editMovement(\'' + x.id + '\')">Edit</button><button class="btn-danger btn-small" onclick="deleteMovement(\'' + x.id + '\')">Delete</button></div></td></tr>'; }).join('')
+               : '<tr><td colspan="6" class="muted">No moves logged yet.</td></tr>');
+  const adj = state.adjustments.slice().sort(byDateDesc);
+  const adjLabel = { birth:'Birth / hatched', purchase:'Purchase / added', death:'Death / loss', sale:'Sale / removed' };
+  $('adjTable').innerHTML = '<tr><th>Date</th><th>Group</th><th>Change</th><th class="r">Qty</th><th>Note</th><th></th></tr>' +
+    (adj.length ? adj.map(function(x){ return '<tr><td>' + fmtDate(x.date) + '</td><td>' + esc(x.groupName) + '</td><td>' + adjLabel[x.type] + '</td><td class="r">' + ((x.type === 'birth' || x.type === 'purchase') ? '+' : '−') + x.qty + '</td><td>' + esc(x.note || '') + '</td>' +
+      '<td><div class="actions"><button class="btn-ghost btn-small" onclick="editAdjustment(\'' + x.id + '\')">Edit</button><button class="btn-danger btn-small" onclick="deleteAdjustment(\'' + x.id + '\')">Delete</button></div></td></tr>'; }).join('')
+                : '<tr><td colspan="6" class="muted">No count changes logged yet.</td></tr>');
+}
+
+function fillCategorySelect(){
+  const type = $('mType').value;
+  const prev = $('mCategory').value;
+  const cats = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  $('mCategory').innerHTML = cats.map(function(c){ return '<option value="' + c.key + '">' + esc(c.label) + ' (Part ' + c.part + ', Line ' + c.line + ')</option>'; }).join('');
+  if (prev && cats.some(function(c){ return c.key === prev; })) $('mCategory').value = prev;
+}
+
+function renderMoney(){
+  const year = state.settings.taxYear;
+  fillCategorySelect();
+  const cash = computeCash(state.money, state.sales, year, currentMonthStr());
+  $('moneyCards').innerHTML =
+    '<div class="card"><div class="num">' + fmtMoney(cash.ytdIn) + '</div><div class="lbl">Money in ' + year + ' (incl. sales)</div></div>' +
+    '<div class="card"><div class="num">' + fmtMoney(cash.ytdOut) + '</div><div class="lbl">Money out ' + year + '</div></div>' +
+    '<div class="card"><div class="num ' + (cash.ytdNet < 0 ? 'neg' : 'pos') + '">' + fmtMoney(cash.ytdNet) + '</div><div class="lbl">Net ' + year + '</div></div>';
+  const rows = state.money.slice().sort(byDateDesc);
+  $('moneyTable').innerHTML = '<tr><th>Date</th><th>Type</th><th>Category</th><th>Schedule F</th><th class="r">Amount</th><th>Note</th><th></th></tr>' +
+    (rows.length ? rows.map(function(e){
+      const c = categoryOf(e.category);
+      return '<tr><td>' + fmtDate(e.date) + '</td><td>' + (e.type === 'income' ? 'Income' : 'Expense') + '</td><td>' + esc(c.label) + '</td><td>Part ' + c.part + ' · Line ' + c.line + '</td><td class="r">' + fmtMoney(e.amount) + '</td><td>' + esc(e.note || '') + '</td>' +
+      '<td><div class="actions"><button class="btn-ghost btn-small" onclick="editMoney(\'' + e.id + '\')">Edit</button><button class="btn-danger btn-small" onclick="deleteMoney(\'' + e.id + '\')">Delete</button></div></td></tr>';
+    }).join('') : '<tr><td colspan="7" class="muted">No entries yet.</td></tr>');
+}
+
+function renderSales(){
+  const year = state.settings.taxYear;
+  let ytd = 0, cnt = 0;
+  state.sales.forEach(function(s){ if (yearOf(s.date) === year){ ytd = round2(ytd + saleTotal(s)); cnt++; } });
+  $('salesCards').innerHTML =
+    '<div class="card"><div class="num">' + fmtMoney(ytd) + '</div><div class="lbl">Sales total ' + year + '</div></div>' +
+    '<div class="card"><div class="num">' + cnt + '</div><div class="lbl">Sales logged ' + year + '</div></div>';
+  const rows = state.sales.slice().sort(byDateDesc);
+  $('salesTable').innerHTML = '<tr><th>Date</th><th>Product</th><th class="r">Qty</th><th>Unit</th><th class="r">Price</th><th class="r">Total</th><th></th></tr>' +
+    (rows.length ? rows.map(function(s){
+      return '<tr><td>' + fmtDate(s.date) + '</td><td>' + esc(s.product) + '</td><td class="r">' + s.qty + '</td><td>' + esc(s.unit) + '</td><td class="r">' + fmtMoney(s.price) + '</td><td class="r">' + fmtMoney(saleTotal(s)) + '</td>' +
+      '<td><div class="actions"><button class="btn-ghost btn-small" onclick="editSale(\'' + s.id + '\')">Edit</button><button class="btn-danger btn-small" onclick="deleteSale(\'' + s.id + '\')">Delete</button></div></td></tr>';
+    }).join('') : '<tr><td colspan="7" class="muted">No sales yet.</td></tr>');
+}
+
+function renderScheduleF(){
+  const year = state.settings.taxYear;
+  const sf = computeScheduleF(state.money, state.sales, year);
+  let html = '<h3 style="margin-top:0">' + esc(state.settings.farmName || 'Your farm') + ' — tax year ' + year + '</h3>';
+  html += '<h3>Part I — Income</h3><table><tr><th>Line</th><th>Item</th><th class="r">Amount</th></tr>';
+  if (sf.partI.length){
+    html += sf.partI.map(function(l){ return '<tr><td>' + l.line + '</td><td>' + esc(l.label) + '</td><td class="r">' + fmtMoney(l.amount) + '</td></tr>'; }).join('');
+  } else html += '<tr><td colspan="3" class="muted">No income recorded for ' + year + '.</td></tr>';
+  html += '<tr class="total"><td></td><td>Gross income</td><td class="r">' + fmtMoney(sf.grossIncome) + '</td></tr></table>';
+  if (sf.salesTotal) html += '<p class="muted">Includes ' + fmtMoney(sf.salesTotal) + ' from the Sales log (Line 2).</p>';
+  html += '<h3>Part II — Expenses</h3><table><tr><th>Line</th><th>Item</th><th class="r">Amount</th></tr>';
+  if (sf.partII.length){
+    html += sf.partII.map(function(l){ return '<tr><td>' + l.line + '</td><td>' + esc(l.label) + '</td><td class="r">' + fmtMoney(l.amount) + '</td></tr>'; }).join('');
+  } else html += '<tr><td colspan="3" class="muted">No expenses recorded for ' + year + '.</td></tr>';
+  html += '<tr class="total"><td></td><td>Total expenses</td><td class="r">' + fmtMoney(sf.totalExpenses) + '</td></tr></table>';
+  html += '<h3>Net farm profit (or loss): <span class="' + (sf.net < 0 ? 'neg' : 'pos') + '">' + fmtMoney(sf.net) + '</span></h3>';
+  html += '<p class="muted">Planning summary only — not a tax filing. Confirm with your tax preparer. Livestock purchased for resale is netted in Part I (Line 1), as Schedule F requires, rather than counted as a Part II expense.</p>';
+  $('sfBody').innerHTML = html;
+}
+
+function renderSettings(){
+  $('setFarmName').value = state.settings.farmName || '';
+  $('setOwner').value = state.settings.owner || '';
+}
+function renderAll(){ renderHeader(); renderDashboard(); renderLivestock(); renderMoney(); renderSales(); renderScheduleF(); renderSettings(); }
+
+/* =================== ACTIONS =================== */
+let modalCtx = null;
+function openModal(title, bodyHTML, onSave){
+  $('modalTitle').textContent = title;
+  $('modalBody').innerHTML = bodyHTML;
+  modalCtx = onSave;
+  $('modalOverlay').classList.add('open');
+}
+function closeModal(){ $('modalOverlay').classList.remove('open'); modalCtx = null; }
+$('modalSave').addEventListener('click', function(){ if (modalCtx) modalCtx(); });
+$('modalOverlay').addEventListener('click', function(e){ if (e.target === $('modalOverlay')) closeModal(); });
+
+function findGroup(id){ return state.groups.filter(function(g){ return g.id === id; })[0]; }
+
+function openMove(groupId){
+  const g = findGroup(groupId); if (!g) return;
+  openModal('Move ' + g.name,
+    '<div class="field"><label>Currently in</label><input value="' + esc(g.paddock || '') + '" disabled></div>' +
+    '<div class="field"><label>Move to paddock / field</label><input id="mvTo" placeholder="e.g. Creek pasture"></div>' +
+    '<div class="field"><label>Date</label><input id="mvDate" type="date" value="' + todayStr() + '"></div>' +
+    '<div class="field"><label>Note (optional)</label><input id="mvNote" placeholder="Why the move?"></div>',
+    function(){
+      const to = $('mvTo').value.trim();
+      if (!to){ alert('Enter the paddock you are moving them to.'); return; }
+      state.movements.push({ id: uid(), groupId: g.id, groupName: g.name, fromPaddock: g.paddock || '', toPaddock: to, date: $('mvDate').value || todayStr(), note: $('mvNote').value.trim() });
+      g.paddock = to;
+      saveState(); closeModal(); renderAll();
+    });
+}
+
+function openAdjust(groupId){
+  const g = findGroup(groupId); if (!g) return;
+  openModal('Change count — ' + g.name,
+    '<div class="field"><label>What happened?</label><select id="adjType">' +
+    '<option value="birth">Birth / hatched (+)</option><option value="purchase">Purchase / added (+)</option>' +
+    '<option value="death">Death / loss (−)</option><option value="sale">Sale / removed (−)</option></select></div>' +
+    '<div class="field"><label>How many?</label><input inputmode="decimal" id="adjQty" type="number" min="1" step="1" value="1"></div>' +
+    '<div class="field"><label>Date</label><input id="adjDate" type="date" value="' + todayStr() + '"></div>' +
+    '<div class="field"><label>Note (optional)</label><input id="adjNote" placeholder="Details"></div>' +
+    '<p class="muted">Current count: ' + g.count + ' head</p>',
+    function(){
+      const type = $('adjType').value;
+      const qty = Math.abs(parseInt($('adjQty').value, 10) || 0);
+      if (!qty){ alert('Enter how many animals.'); return; }
+      const delta = (type === 'birth' || type === 'purchase') ? qty : -qty;
+      if (g.count + delta < 0){ alert('That would take the group below zero (current count is ' + g.count + ').'); return; }
+      g.count += delta;
+      state.adjustments.push({ id: uid(), groupId: g.id, groupName: g.name, type: type, qty: qty, date: $('adjDate').value || todayStr(), note: $('adjNote').value.trim() });
+      saveState(); closeModal(); renderAll();
+    });
+}
+
+function deleteGroup(id){
+  const g = findGroup(id); if (!g) return;
+  if (!confirm('Delete the group "' + g.name + '"? Its movement and count-change history stays in the logs.')) return;
+  state.groups = state.groups.filter(function(x){ return x.id !== id; });
+  saveState(); renderAll();
+}
+function deleteMoney(id){
+  if (!confirm('Delete this money entry?')) return;
+  state.money = state.money.filter(function(x){ return x.id !== id; });
+  saveState(); renderAll();
+}
+function deleteSale(id){
+  if (!confirm('Delete this sale?')) return;
+  state.sales = state.sales.filter(function(x){ return x.id !== id; });
+  saveState(); renderAll();
+}
+
+function findMoney(id){ return state.money.filter(function(x){ return x.id === id; })[0]; }
+function findSale(id){ return state.sales.filter(function(x){ return x.id === id; })[0]; }
+function findMovement(id){ return state.movements.filter(function(x){ return x.id === id; })[0]; }
+function findAdjustment(id){ return state.adjustments.filter(function(x){ return x.id === id; })[0]; }
+function adjDelta(x){ const q = Math.abs(Number(x.qty) || 0); return (x.type === 'birth' || x.type === 'purchase') ? q : -q; }
+function catOptions(sel){
+  let h = '';
+  EXPENSE_CATEGORIES.forEach(function(c){ h += '<option value="' + c.key + '"' + (c.key === sel ? ' selected' : '') + '>Expense — ' + esc(c.label) + '</option>'; });
+  INCOME_CATEGORIES.forEach(function(c){ h += '<option value="' + c.key + '"' + (c.key === sel ? ' selected' : '') + '>Income — ' + esc(c.label) + '</option>'; });
+  return h;
+}
+function editMoney(id){
+  const e = findMoney(id); if (!e) return;
+  openModal('Edit money entry',
+    '<div class="field"><label>Date</label><input id="emDate" type="date" value="' + esc(e.date) + '"></div>' +
+    '<div class="field"><label>Type</label><select id="emType"><option value="expense"' + (e.type === 'expense' ? ' selected' : '') + '>Expense</option><option value="income"' + (e.type === 'income' ? ' selected' : '') + '>Income</option></select></div>' +
+    '<div class="field"><label>Category (Schedule F)</label><select id="emCat">' + catOptions(e.category) + '</select></div>' +
+    '<div class="field"><label>Amount ($)</label><input id="emAmt" type="number" min="0.01" step="0.01" inputmode="decimal" value="' + Number(e.amount) + '"></div>' +
+    '<div class="field"><label>Note</label><input id="emNote" value="' + esc(e.note || '') + '"></div>',
+    function(){
+      const amt = parseFloat($('emAmt').value);
+      if (!($('emDate').value)){ alert('Pick a date.'); return; }
+      if (!(amt > 0)){ alert('Enter an amount greater than zero.'); return; }
+      e.date = $('emDate').value; e.type = $('emType').value; e.category = $('emCat').value;
+      e.amount = round2(amt); e.note = $('emNote').value.trim();
+      saveState(); closeModal(); renderAll();
+    });
+}
+function editSale(id){
+  const x = findSale(id); if (!x) return;
+  openModal('Edit sale',
+    '<div class="field"><label>Date</label><input id="esDate" type="date" value="' + esc(x.date) + '"></div>' +
+    '<div class="field"><label>Product</label><input id="esProduct" value="' + esc(x.product) + '"></div>' +
+    '<div class="field"><label>Quantity</label><input id="esQty" type="number" min="0.01" step="0.01" inputmode="decimal" value="' + Number(x.qty) + '"></div>' +
+    '<div class="field"><label>Unit</label><input id="esUnit" value="' + esc(x.unit) + '"></div>' +
+    '<div class="field"><label>Price per unit ($)</label><input id="esPrice" type="number" min="0" step="0.01" inputmode="decimal" value="' + Number(x.price) + '"></div>',
+    function(){
+      const qty = parseFloat($('esQty').value), price = parseFloat($('esPrice').value);
+      if (!($('esDate').value)){ alert('Pick a date.'); return; }
+      if (!$('esProduct').value.trim()){ alert('Enter the product sold.'); return; }
+      if (!(qty > 0) || !(price >= 0)){ alert('Enter a quantity and a price per unit.'); return; }
+      x.date = $('esDate').value; x.product = $('esProduct').value.trim(); x.qty = qty;
+      x.unit = $('esUnit').value.trim() || 'each'; x.price = round2(price);
+      saveState(); closeModal(); renderAll();
+    });
+}
+function editMovement(id){
+  const mv = findMovement(id); if (!mv) return;
+  const g = findGroup(mv.groupId);
+  openModal('Edit movement — ' + (mv.groupName || ''),
+    '<div class="field"><label>From paddock</label><input id="emvFrom" value="' + esc(mv.fromPaddock || '') + '"></div>' +
+    '<div class="field"><label>To paddock</label><input id="emvTo" value="' + esc(mv.toPaddock || '') + '"></div>' +
+    '<div class="field"><label>Date</label><input id="emvDate" type="date" value="' + esc(mv.date) + '"></div>' +
+    '<div class="field"><label>Note</label><input id="emvNote" value="' + esc(mv.note || '') + '"></div>' +
+    (g ? '<p class="muted">If this move is where the group currently lives, its paddock follows the corrected "To" field.</p>' : ''),
+    function(){
+      const to = $('emvTo').value.trim();
+      if (!to){ alert('Enter the paddock they moved to.'); return; }
+      if (!($('emvDate').value)){ alert('Pick a date.'); return; }
+      if (g && g.paddock === mv.toPaddock) g.paddock = to;
+      mv.fromPaddock = $('emvFrom').value.trim(); mv.toPaddock = to;
+      mv.date = $('emvDate').value; mv.note = $('emvNote').value.trim();
+      saveState(); closeModal(); renderAll();
+    });
+}
+function deleteMovement(id){
+  const mv = findMovement(id); if (!mv) return;
+  if (!confirm('Delete this movement (' + (mv.groupName || 'group') + ' → ' + (mv.toPaddock || '') + ' on ' + fmtDate(mv.date) + ')? If the group still lives there, its paddock reverts to "' + (mv.fromPaddock || '—') + '".')) return;
+  const g = findGroup(mv.groupId);
+  if (g && g.paddock === mv.toPaddock) g.paddock = mv.fromPaddock || '';
+  state.movements = state.movements.filter(function(x){ return x.id !== id; });
+  saveState(); renderAll();
+}
+function editAdjustment(id){
+  const x = findAdjustment(id); if (!x) return;
+  const g = findGroup(x.groupId);
+  const opts = [['birth','Birth / hatched (+)'],['purchase','Purchase / added (+)'],['death','Death / loss (−)'],['sale','Sale / removed (−)']].map(function(o){
+    return '<option value="' + o[0] + '"' + (x.type === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('');
+  openModal('Edit count change — ' + (x.groupName || ''),
+    '<div class="field"><label>What happened?</label><select id="eadjType">' + opts + '</select></div>' +
+    '<div class="field"><label>How many?</label><input id="eadjQty" type="number" min="1" step="1" inputmode="decimal" value="' + Math.abs(Number(x.qty) || 0) + '"></div>' +
+    '<div class="field"><label>Date</label><input id="eadjDate" type="date" value="' + esc(x.date) + '"></div>' +
+    '<div class="field"><label>Note</label><input id="eadjNote" value="' + esc(x.note || '') + '"></div>' +
+    (g ? '<p class="muted">Group count now: ' + g.count + ' head. Saving reverses the old entry and applies the corrected one, so the head count stays true.</p>' : '<p class="muted">This group is no longer in the book — the log entry is corrected, with no head count to adjust.</p>'),
+    function(){
+      const qty = Math.abs(parseInt($('eadjQty').value, 10) || 0);
+      if (!qty){ alert('Enter how many animals.'); return; }
+      if (!($('eadjDate').value)){ alert('Pick a date.'); return; }
+      const newDelta = (($('eadjType').value === 'birth' || $('eadjType').value === 'purchase') ? qty : -qty);
+      if (g){
+        const corrected = g.count - adjDelta(x) + newDelta;
+        if (corrected < 0){ alert('That correction would take the group below zero (current count is ' + g.count + '). Fix the other count changes first.'); return; }
+        g.count = corrected;
+      }
+      x.type = $('eadjType').value; x.qty = qty; x.date = $('eadjDate').value; x.note = $('eadjNote').value.trim();
+      saveState(); closeModal(); renderAll();
+    });
+}
+function deleteAdjustment(id){
+  const x = findAdjustment(id); if (!x) return;
+  const lbl = { birth:'Birth / hatched', purchase:'Purchase / added', death:'Death / loss', sale:'Sale / removed' }[x.type] || x.type;
+  if (!confirm('Delete this count change (' + lbl + ' ' + Math.abs(Number(x.qty) || 0) + ' — ' + (x.groupName || 'group') + ', ' + fmtDate(x.date) + ')? The group head count is reversed by the same amount so it stays correct.')) return;
+  const g = findGroup(x.groupId);
+  if (g){
+    const reversed = g.count - adjDelta(x);
+    if (reversed < 0){ alert('Deleting this entry would take the group below zero (current count is ' + g.count + '), because later count changes build on it. Correct or delete those later changes first — nothing was changed.'); return; }
+    g.count = reversed;
+  }
+  state.adjustments = state.adjustments.filter(function(y){ return y.id !== id; });
+  saveState(); renderAll();
+}
+
+function clearDemo(){
+  if (!confirm('Clear the demo farm and start with a blank PastureLedger?')) return;
+  state = emptyState(); saveState(); renderAll();
+}
+function loadDemo(){
+  if (!confirm('Replace everything currently stored with the demo farm? Download a backup first if you need your data.')) return;
+  state = demoState(); saveState(); renderAll();
+}
+function eraseAll(){
+  if (!confirm('Erase ALL PastureLedger data stored in this browser? This cannot be undone.')) return;
+  state = emptyState(); saveState(); renderAll();
+}
+
+function exportMoneyCSV(){ downloadText('pastureledger-money-log-' + state.settings.taxYear + '.csv', moneyToCSV(state.money), 'text/csv;charset=utf-8'); }
+function exportSalesCSV(){ downloadText('pastureledger-sales-log-' + state.settings.taxYear + '.csv', salesToCSV(state.sales), 'text/csv;charset=utf-8'); }
+function exportBackup(){ downloadText('pastureledger-backup.json', JSON.stringify(state, null, 2), 'application/json'); }
+
+/* =================== EVENTS / INIT =================== */
+$('tabBar').addEventListener('click', function(e){
+  const btn = e.target.closest('button[data-view]'); if (!btn) return;
+  document.querySelectorAll('#tabBar button').forEach(function(b){ b.classList.toggle('active', b === btn); });
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.toggle('active', v.id === 'view-' + btn.dataset.view); });
+});
+$('yearSelect').addEventListener('change', function(){ state.settings.taxYear = parseInt($('yearSelect').value, 10); saveState(); renderAll(); });
+
+$('groupForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  state.groups.push({ id: uid(), species: $('gSpecies').value, name: $('gName').value.trim(), count: Math.max(0, parseInt($('gCount').value, 10) || 0), paddock: $('gPaddock').value.trim(), dateIn: $('gDateIn').value || todayStr() });
+  saveState(); e.target.reset(); $('gDateIn').value = todayStr(); renderAll();
+});
+$('mType').addEventListener('change', fillCategorySelect);
+$('moneyForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const amt = parseFloat($('mAmount').value);
+  if (!(amt > 0)){ alert('Enter an amount greater than zero.'); return; }
+  /* repeat-entry context (RigLedger pattern): date, type and category survive the submit */
+  const keep = { date: $('mDate').value || todayStr(), type: $('mType').value, category: $('mCategory').value };
+  state.money.push({ id: uid(), date: keep.date, type: keep.type, category: keep.category, amount: round2(amt), note: $('mNote').value.trim() });
+  saveState(); e.target.reset(); renderAll();
+  $('mDate').value = keep.date; $('mType').value = keep.type; fillCategorySelect(); $('mCategory').value = keep.category;
+});
+$('salesForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const qty = parseFloat($('sQty').value), price = parseFloat($('sPrice').value);
+  if (!(qty > 0) || !(price >= 0)){ alert('Enter a quantity and a price per unit.'); return; }
+  /* repeat-entry context: date, product, unit and price survive the submit (quantity is re-typed each sale) */
+  const keep = { date: $('sDate').value || todayStr(), product: $('sProduct').value.trim(), unit: $('sUnit').value.trim(), price: $('sPrice').value };
+  state.sales.push({ id: uid(), date: keep.date, product: keep.product, qty: qty, unit: keep.unit, price: round2(price) });
+  saveState(); e.target.reset(); renderAll();
+  $('sDate').value = keep.date; $('sProduct').value = keep.product; $('sUnit').value = keep.unit; $('sPrice').value = keep.price;
+});
+$('settingsForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  state.settings.farmName = $('setFarmName').value.trim();
+  state.settings.owner = $('setOwner').value.trim();
+  state.settings.taxYear = parseInt($('setTaxYear').value, 10);
+  saveState(); renderAll();
+  alert('Settings saved.');
+});
+$('importFile').addEventListener('change', function(e){
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(){
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (!parsed || !parsed.settings || !Array.isArray(parsed.groups)) throw new Error('bad file');
+      if (!confirm('Replace the current book (' + state.groups.length + ' livestock groups, ' + state.money.length + ' money entries, ' + state.sales.length + ' sales) with this backup? This cannot be undone.')){ e.target.value = ''; return; }
+      state = sanitizeState(parsed); saveState(); renderAll();
+      alert('Backup imported.');
+    } catch(err){ alert('That file could not be imported — it does not look like a PastureLedger backup.'); }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- Help & support (QA §11): the Email-us link and the version
+   line are rebuilt from APP_VERSION at runtime, so a version bump can
+   never leave a stale version in either place. The static href and text
+   in the HTML are only no-JS fallbacks. ---------- */
+function syncHelpEmail(){
+  var a = $('helpEmailBtn'); if (a){
+    a.href = "mailto:whitewolfbackoffice@gmail.com?subject=" + encodeURIComponent("PastureLedger help \u2014 v" + APP_VERSION) +
+      "&body=" + encodeURIComponent("Tell us what you were trying to do and what happened:\n\n");
+  }
+  var v = $('helpVersionLine'); if (v) v.textContent = "PastureLedger v" + APP_VERSION;
+}
+
+$('gDateIn').value = todayStr();
+$('mDate').value = todayStr();
+$('sDate').value = todayStr();
+renderAll();
+syncHelpEmail();
+</script>
+
+<style id="wwLegalCss">
+#wwLegalOverlay{position:fixed;inset:0;z-index:99990;background:rgba(10,12,16,.72);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:18px 12px;box-sizing:border-box}
+#wwLegalOverlay[hidden]{display:none}
+.ww-card{background:#fff;color:#16181d;max-width:560px;width:100%;border-radius:14px;padding:22px 20px;box-sizing:border-box;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.ww-appname{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#5b6472;font-weight:700}
+.ww-card h2{margin:6px 0 10px;font-size:24px}
+.ww-sum{font-size:17px;line-height:1.45;font-weight:600;margin:10px 0}
+.ww-follow{color:#444c58;font-size:14px;line-height:1.45}
+.ww-updated{background:#fff4d6;border:1px solid #e3c566;color:#5c4a00;border-radius:8px;padding:8px 10px;font-size:14px}
+.ww-btn{display:block;width:100%;min-height:48px;margin:10px 0 0;padding:12px 14px;font-size:16px;border-radius:10px;border:1px solid #9aa3af;background:#f2f4f7;color:#16181d;cursor:pointer;box-sizing:border-box}
+.ww-btn.ww-primary{background:#14532d;border-color:#14532d;color:#fff;font-weight:700;min-height:52px}
+.ww-btn.ww-primary:disabled{opacity:.45;cursor:not-allowed}
+.ww-check{display:flex;gap:10px;align-items:flex-start;margin:14px 0 2px;font-size:15px;line-height:1.4;color:#16181d;cursor:pointer}
+.ww-check input{width:22px;height:22px;flex:0 0 auto;margin:1px 0 0;accent-color:#14532d;cursor:pointer}
+#wwLegalPanel{position:fixed;inset:0;z-index:99995;background:#fff;color:#16181d;overflow-y:auto;box-sizing:border-box}
+#wwLegalPanel[hidden]{display:none}
+.ww-panel-inner{max-width:720px;margin:0 auto;padding:16px 18px 40px;box-sizing:border-box;line-height:1.55}
+.ww-panel-inner h3{margin-top:26px}
+.ww-panel-inner h4{margin-top:20px}
+.ww-accept{background:#eef7ee;border:1px solid #b9d8b9;border-radius:8px;padding:10px 12px}
+.ww-seller{margin-top:28px;padding-top:12px;border-top:1px solid #ddd;color:#444c58}
+#wwLegalClose{min-height:48px;padding:10px 16px;font-size:16px;border-radius:10px;border:1px solid #9aa3af;background:#f2f4f7;color:#16181d;cursor:pointer}
+[data-ww-legal-card]{border:1px solid #9aa3af;border-radius:12px;padding:14px;margin:14px 0;background:rgba(127,127,127,.06)}
+[data-ww-legal-btn]{min-height:48px;padding:10px 16px;font-size:16px;border-radius:10px;border:1px solid #14532d;background:#14532d;color:#fff;font-weight:700;cursor:pointer;width:100%}
+@media print{#wwLegalOverlay,#wwLegalPanel,[data-ww-legal-card]{display:none!important}}
+</style>
+
+<!-- ===== White Wolf Legal Pattern v1.0 ===== -->
+<div id="wwLegalOverlay" hidden>
+  <div class="ww-card" role="dialog" aria-modal="true" aria-labelledby="wwLegalTitle">
+    <div class="ww-appname">PastureLedger</div>
+    <h2 id="wwLegalTitle">Terms of Use</h2>
+    <p class="ww-updated" id="wwUpdatedNote" hidden>Our terms were updated (v1.0).</p>
+    <p class="ww-sum">Your data stays on your device.<br>Estimates are aids, not guarantees.<br>You&#39;re responsible for checking outputs before you rely on them.</p>
+    <p class="ww-follow">The full Terms and Disclaimer are one tap away, now and any time in Settings &#8594; Legal.</p>
+    <button type="button" class="ww-btn" id="wwReadTerms">Read the full Terms</button>
+    
+    <label class="ww-check"><input type="checkbox" id="wwAgreeCheck"> <span>I have read and I agree to the Terms of Use</span></label>
+    <button type="button" class="ww-btn ww-primary" id="wwAgree" disabled>I Agree</button>
+  </div>
+</div>
+<div id="wwLegalPanel" hidden>
+  <div class="ww-panel-inner">
+    <button type="button" id="wwLegalClose">&#8592; Back</button>
+    <h2>Legal</h2>
+    <p class="ww-accept" id="wwAcceptLine">You have not recorded acceptance of the Terms yet.</p>
+    <h3>Terms of Use</h3>
+    <p><strong>Version 1.0 (DRAFT — pending attorney review)</strong> <strong>Seller: White Wolf Tree Service LLC, selling digital products under the name "White Wolf Digital"</strong> <strong>Contact: whitewolfbackoffice@gmail.com</strong></p>
+<hr>
+<h4>1. What you're buying</h4>
+<p>Our apps (including ForgeFit AI, ForgeKitchen, TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, PastureLedger, and the other titles sold under White Wolf Digital) are single-file software tools. When you buy one, you are buying a <strong>license to use the file</strong>, not ownership of the software itself.</p>
+<h4>2. Your license</h4>
+<ul>
+<li>You may use the app for your own personal or business work.</li>
+<li>You may open it on your own devices (phone, tablet, computer) and move your</li>
+</ul>
+<p>own data between them using the app's built-in backup/export tools.</p>
+<ul>
+<li>You may <strong>not</strong> resell, redistribute, give away, upload, or share the app</li>
+</ul>
+<p>file (or a copy of it) with anyone else — including posting it online, bundling it with other products, or selling access to it.</p>
+<ul>
+<li>You may <strong>not</strong> claim the app as your own work, remove its branding or</li>
+</ul>
+<p>notices, or use it to build a competing product for resale.</p>
+<ul>
+<li>One purchase = one buyer. A business purchase covers the buyer and their</li>
+</ul>
+<p>own employees using it for that business's work; it does not cover other businesses.</p>
+<h4>3. Your data stays yours — and stays on your device</h4>
+<ul>
+<li>The current versions of our apps run <strong>entirely on your device</strong>. They have</li>
+</ul>
+<p>no accounts, no sign-in, no analytics, and they collect, transmit, and store <strong>none</strong> of your information on any server. We never see your data.</p>
+<ul>
+<li>Your records are stored in your browser/app storage on your device. **You</li>
+</ul>
+<p>are responsible for backing them up** using the app's export tools. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, and we cannot recover them — we never had a copy.</p>
+<ul>
+<li>Files you export (backups, quotes, PDFs) are under your control. Where you</li>
+</ul>
+<p>store or send them is up to you.</p>
+<h4>4. Estimates are tools, not guarantees</h4>
+<p>Every number our apps produce — bids, prices, costs, calorie targets, projections, schedules, totals — is an <strong>estimate generated from the information you enter and the settings you choose</strong>. Outputs are aids for your own judgment, not guarantees of price, profit, outcome, or result. You are responsible for checking any output before relying on it (see also the disclaimer that applies to your app: Health Disclaimer for fitness/nutrition apps, Estimator Disclaimer for contractor tools). If an input is wrong, the output will be wrong.</p>
+<h4>5. Acceptable use</h4>
+<p>Don't use the apps to break the law, infringe anyone's rights, or misrepresent quotes, invoices, or records to your own customers. For the fitness apps, the guardrails in the app (healthy-rate limits, calorie floor) are part of the product — don't treat the app as a way around them.</p>
+<h4>6. Provided "as is"</h4>
+<p>The apps are provided <strong>"as is" and "as available," without warranties of any kind</strong>, express or implied — including merchantability, fitness for a particular purpose, accuracy of calculations, and uninterrupted or error-free operation — to the maximum extent allowed by law. Software has bugs; browsers change; we work to fix problems but do not promise any app is error-free or will work on every device or browser forever.</p>
+<h4>7. Limitation of liability</h4>
+<p>To the maximum extent allowed by law:</p>
+<ul>
+<li>We are **not liable for indirect, incidental, special, or consequential</li>
+</ul>
+<p>damages** — including lost profits, lost or mispriced jobs, lost data, or business interruption — arising from use of the apps.</p>
+<ul>
+<li>Our total liability for any claim connected to an app is limited to the</li>
+</ul>
+<p><strong>amount you paid for that app</strong>.</p>
+<ul>
+<li>Nothing in these terms limits liability that cannot legally be limited.</li>
+</ul>
+<h4>8. Refunds</h4>
+<p>Refunds are handled <strong>by the storefront you bought from, under that storefront's policy</strong> — Gumroad's refund policy for Gumroad purchases, and Google Play's refund policy for Play purchases. These terms do not add to, replace, or override the storefront's refund rules. If a file is defective and won't open, contact us at whitewolfbackoffice@gmail.com and we'll fix or replace the file.</p>
+<h4>9. Updates and changes to these terms</h4>
+<ul>
+<li>We may release updated versions of an app. Updates may add, change, or</li>
+</ul>
+<p>remove features.</p>
+<ul>
+<li>We may update these terms. The version you agreed to is recorded in the</li>
+</ul>
+<p>app (version number and date) at first-run acceptance. If terms change, the app may ask you to accept the new version once on next open. Updated terms apply going forward, not retroactively.</p>
+<ul>
+<li>If you don't agree to an updated version of the terms, stop using the app.</li>
+</ul>
+<h4>10. Governing law</h4>
+<p>These terms are governed by the laws of the <strong>State of Oklahoma</strong>, USA. (Attorney to confirm governing law and venue before publication.)</p>
+<h4>11. Contact</h4>
+<p>White Wolf Tree Service LLC (White Wolf Digital) — whitewolfbackoffice@gmail.com.</p>
+<hr>
+<h4>CONNECTED FEATURES — takes effect only when these features ship</h4>
+<p><em>The sections below apply only to future connected features (device sync via Health Connect, AI voice logging, and the AI Goal Preview in ForgeFit). They do not apply to the current offline versions, which never transmit data.</em></p>
+<ul>
+<li><strong>Opt-in only.</strong> Connected features are off by default. Each one asks for</li>
+</ul>
+<p>your separate, explicit consent — on its own consent screen, in plain language — before anything leaves your device. Declining never disables the app's offline features.</p>
+<ul>
+<li><strong>What gets sent.</strong> Only what the consent screen names, only when you use</li>
+</ul>
+<p>the feature: for example, a meal description (text, or audio only if cloud transcription is on) for AI voice logging, or the single photo you choose for an AI Goal Preview.</p>
+<ul>
+<li><strong>No retention by us.</strong> Our relay service passes your request to the named</li>
+</ul>
+<p>AI provider and keeps nothing — no copies of your photos, audio, transcripts, or entries are stored on our servers. Provider handling is described on the consent screen and in the Privacy Policy.</p>
+<ul>
+<li><strong>Health data stays on the device.</strong> Device sync (Health Connect) reads</li>
+</ul>
+<p>your health data on your phone and stores it in the app on your phone. It is not uploaded to us.</p>
+<ul>
+<li><strong>Allowances.</strong> Some connected features run on third-party AI services we</li>
+</ul>
+<p>pay for per use, so they may include a monthly allowance described in the app (for example, a set number of AI previews or voice entries per month), with optional additional credits. Allowances and pricing will be shown in the app before you use the feature; they are not a subscription unless the app says so in plain words.</p>
+<ul>
+<li><strong>Permissions.</strong> Connected features may request device permissions (such</li>
+</ul>
+<p>as Health Connect access or the microphone) at the moment you first use them. You can revoke permissions any time in your device settings; the related feature will simply stop working.</p>
+    
+    <h3>Privacy</h3>
+    <p>This app has no accounts and collects no data. Everything you enter is stored only on your device, in your browser/app storage, and is never uploaded, transmitted, or shared. We never see your data. Files you export (backups, quotes, PDFs) are under your control &mdash; store and send them only where you choose. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, so export backups regularly.</p>
+    <p class="ww-seller">Sold by White Wolf Tree Service LLC (White Wolf Digital) &mdash; whitewolfbackoffice@gmail.com</p>
+  </div>
+</div>
+
+<script>
+/* ===== White Wolf Legal Pattern v1.0 ===== */
+(function(){
+"use strict";
+var TERMS_VERSION = "1.0";
+var WW_KEY = "pastureledger_v1";
+var WW_HAS_DISC = false;
+var WWREC = null;
+function wwValid(r){ return r && typeof r === "object" && typeof r.termsVersion === "string" && !!r.termsVersion; }
+function wwVerCmp(a,b){ var pa=String(a).split("."), pb=String(b).split("."); for(var i=0;i<3;i++){ var x=parseInt(pa[i]||"0",10)||0, y=parseInt(pb[i]||"0",10)||0; if(x<y) return -1; if(x>y) return 1; } return 0; }
+function wwReadStored(){ try{ var raw = localStorage.getItem(WW_KEY); if(!raw) return null; var o = JSON.parse(raw); return (o && typeof o === "object") ? o : null; }catch(e){ return null; } }
+var _wwStored = wwReadStored();
+if(_wwStored && wwValid(_wwStored.legal)) WWREC = _wwStored.legal;
+try{
+  var _wwOrigSet = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = function(k,v){
+    if(k === WW_KEY && typeof v === "string"){
+      try{ var o = JSON.parse(v); if(o && typeof o === "object" && !Array.isArray(o)){
+        if(wwValid(o.legal)){ WWREC = o.legal; }
+        else if(WWREC){ o.legal = WWREC; v = JSON.stringify(o); }
+      } }catch(e){}
+    }
+    return _wwOrigSet(k,v);
+  };
+}catch(e){}
+function wwSyncState(){ try{ if(typeof state !== "undefined" && state && typeof state === "object" && WWREC) state.legal = WWREC; }catch(e){} }
+function wwPersist(){
+  wwSyncState();
+  try{ saveState() }catch(e){}
+  try{ var o = wwReadStored(); if(o){ o.legal = WWREC; localStorage.setItem(WW_KEY, JSON.stringify(o)); } }catch(e){}
+}
+function wwAcceptLine(){
+  var el = document.getElementById("wwAcceptLine"); if(!el) return;
+  if(WWREC && WWREC.acceptedDate){ el.textContent = "You agreed to Terms v" + WWREC.termsVersion + " on " + WWREC.acceptedDate + "."; }
+  else { el.textContent = "You have not recorded acceptance of the Terms yet."; }
+}
+function wwOpenLegal(){ var p = document.getElementById("wwLegalPanel"); if(p){ p.hidden = false; p.scrollTop = 0; } wwAcceptLine(); }
+function wwCloseLegal(){ var p = document.getElementById("wwLegalPanel"); if(p) p.hidden = true; }
+function wwInit(){
+  var overlay = document.getElementById("wwLegalOverlay");
+  var agree = document.getElementById("wwAgree");
+  var rt = document.getElementById("wwReadTerms");
+  var rd = document.getElementById("wwReadDisc");
+  var close = document.getElementById("wwLegalClose");
+  if(rt) rt.addEventListener("click", wwOpenLegal);
+  if(rd) rd.addEventListener("click", wwOpenLegal);
+  if(close) close.addEventListener("click", wwCloseLegal);
+  var agreeCheck = document.getElementById("wwAgreeCheck");
+  if(agree) agree.disabled = !(agreeCheck && agreeCheck.checked);
+  if(agreeCheck && agree) agreeCheck.addEventListener("change", function(){ agree.disabled = !agreeCheck.checked; });
+  if(agree) agree.addEventListener("click", function(){
+    if(agree.disabled || !(agreeCheck && agreeCheck.checked)) return;
+    WWREC = { termsVersion: TERMS_VERSION, acceptedDate: new Date().toISOString().slice(0,10), disclaimerShown: WW_HAS_DISC };
+    wwPersist(); wwAcceptLine();
+    if(overlay) overlay.hidden = true;
+  });
+  wwSyncState(); wwAcceptLine();
+  if(!WWREC || wwVerCmp(WWREC.termsVersion, TERMS_VERSION) < 0){
+    if(WWREC){ var note = document.getElementById("wwUpdatedNote"); if(note) note.hidden = false; }
+    if(overlay) overlay.hidden = false;
+  }
+  var anchors = [{sel:"#view-settings",marker:null}];
+  function wwEnsureBtn(){
+    for(var i=0;i<anchors.length;i++){
+      var a = anchors[i]; var el = document.querySelector(a.sel); if(!el) continue;
+      if(el.querySelector("[data-ww-legal-btn]")) continue;
+      var txt = el.textContent || "";
+      if(a.marker){ if(txt.toLowerCase().indexOf(a.marker.toLowerCase()) < 0) continue; }
+      else if(txt.replace(/\s+/g,"").length < 40) continue;
+      var card = document.createElement("div");
+      card.setAttribute("data-ww-legal-card","");
+      card.innerHTML = "<h3 style=\"margin:0 0 6px\">Legal</h3><p style=\"margin:0 0 10px\">Terms of Use, disclaimer and privacy for this app.</p>";
+      var b = document.createElement("button");
+      b.type = "button"; b.setAttribute("data-ww-legal-btn",""); b.textContent = "View Legal \u2014 Terms, Disclaimer & Privacy";
+      b.addEventListener("click", wwOpenLegal);
+      card.appendChild(b); el.appendChild(card);
+    }
+  }
+  wwEnsureBtn();
+  setInterval(wwEnsureBtn, 700);
+}
+if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", wwInit); else wwInit();
+})();
+</script>
+<script>
+/* ============================================================================
+   SHARED VOICE DICTATION LAYER — "vv" snippet v1.0 (2026-10-29)
+   Governing standard: QA-STANDARD.md §9a (mic dictation on every data-entry
+   field). Built once, dropped into every catalog app verbatim. Do not fork
+   per app — fix here and re-drop.
+
+   What it does:
+   - Adds a >=48px mic button beside every text input, number input, and
+     textarea (an <input> with no type attribute counts as text). Selects,
+     checkboxes, radios, file/date/tel/email inputs are NOT wired — they keep
+     their native pickers/keyboards (per voice-retrofit-plan.md counting).
+   - Tap the mic -> Web Speech API dictation into that field, exactly as if
+     typed. Interim words show live in the field; nothing auto-submits.
+   - Number fields: spoken numbers are converted ("sixty five" -> 65,
+     "two point five" -> 2.5, "1,200" -> 1200). If the words can't be read as
+     a number, the field is left untouched and the user is told plainly.
+   - After a successful dictation the field receives real bubbling "input"
+     and "change" events, so the host app's own handlers fire exactly as if
+     the user typed.
+   - Fields added later (re-renders, add-row buttons) are wired automatically
+     via MutationObserver.
+   - No SpeechRecognition (Firefox, file:// copies in most browsers, denied
+     permission): the mic shows the honest note "Voice isn't available on
+     this device/browser — typing works as always" and typing is never
+     blocked, hidden, or degraded.
+   - Failed/empty recognition announces "Didn't catch that — try again or
+     type it" and restores the field's previous value.
+
+   Wiring (see README.md in this folder): paste this whole IIFE in a <script>
+   block just before </body>. It injects its own styles (#vv-style) — no
+   other changes needed. It never touches storage, prices, or app state.
+   ============================================================================ */
+(function () {
+  "use strict";
+  if (window.__vvDictation) return; // drop-in twice = wire once
+  window.__vvDictation = "1.0";
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  var FALLBACK_MSG = "Voice isn't available on this device/browser — typing works as always";
+  var MISSED_MSG = "Didn't catch that — try again or type it";
+  var BLOCKED_MSG = "Microphone is blocked — typing works as always. Check the browser's mic permission if you want voice.";
+
+  /* ---- styles (self-injected; dictation-snippet.css holds the same rules) ---- */
+  var CSS = [
+    ".vv-wrap{display:flex;gap:6px;align-items:flex-start}",
+    ".vv-wrap>input,.vv-wrap>textarea{flex:1 1 0;min-width:0}",
+    ".vv-mic{flex:0 0 auto;width:48px;min-width:48px;height:48px;border-radius:8px;border:1px solid #b9c2ba;background:#fff;font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}",
+    ".vv-mic:active{transform:scale(.96)}",
+    ".vv-mic.vv-live{background:#b3372e;border-color:#b3372e;animation:vvpulse 1s ease-in-out infinite}",
+    "@keyframes vvpulse{0%,100%{opacity:1}50%{opacity:.5}}",
+    ".vv-status{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);max-width:min(92vw,480px);background:#1c2420;color:#fff;padding:10px 14px;border-radius:9px;font-size:14px;line-height:1.35;z-index:99999;box-shadow:0 4px 18px rgba(0,0,0,.25);display:none;text-align:center;pointer-events:none}",
+    ".vv-status.vv-show{display:block}",
+    "@media print{.vv-mic{display:none!important}.vv-status{display:none!important}}"
+  ].join("\n");
+  if (!document.getElementById("vv-style")) {
+    var st = document.createElement("style");
+    st.id = "vv-style"; st.textContent = CSS;
+    (document.head || document.documentElement).appendChild(st);
+  }
+
+  /* ---- status announcements ---- */
+  var statusEl = null, statusTimer = null;
+  function say(msg, ms) {
+    if (!statusEl) {
+      statusEl = document.createElement("div");
+      statusEl.className = "vv-status"; statusEl.setAttribute("role", "status");
+      statusEl.setAttribute("aria-live", "polite");
+      document.body.appendChild(statusEl);
+    }
+    statusEl.textContent = msg;
+    statusEl.classList.add("vv-show");
+    if (statusTimer) clearTimeout(statusTimer);
+    statusTimer = setTimeout(function () { statusEl.classList.remove("vv-show"); }, ms || 5000);
+  }
+
+  /* ---- spoken-number conversion ---- */
+  var ONES = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+  var TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+  function wordsToNumber(s) {
+    var words = s.split(/[\s-]+/), total = 0, current = 0, seen = false, decimal = null, decPlace = 0.1, neg = false;
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      if (!w || w === "and") continue;
+      if (w === "minus" || w === "negative") { neg = true; continue; }
+      if (w === "point") { decimal = true; continue; }
+      if (decimal) {
+        if (ONES.hasOwnProperty(w) && ONES[w] < 10) { if (decimal === true) decimal = 0; decimal += ONES[w] * decPlace; decPlace /= 10; seen = true; }
+        continue;
+      }
+      if (ONES.hasOwnProperty(w)) { current += ONES[w]; seen = true; }
+      else if (TENS.hasOwnProperty(w)) { current += TENS[w]; seen = true; }
+      else if (w === "hundred") { current = (current || 1) * 100; seen = true; }
+      else if (w === "thousand") { total += (current || 1) * 1000; current = 0; seen = true; }
+      else if (w === "million") { total += (current || 1) * 1000000; current = 0; seen = true; }
+      else if (w === "a" || w === "an") { /* filler before hundred/thousand */ }
+      /* any other word (dollars, feet, hours…) is ignored filler */
+    }
+    if (!seen) return null;
+    var n = total + current + (decimal ? decimal : 0);
+    return neg ? -n : n;
+  }
+  function parseSpokenNumber(raw) {
+    if (!raw) return null;
+    var s = String(raw).toLowerCase().replace(/\$/g, " ").replace(/\s+/g, " ").trim();
+    s = s.replace(/(\d),(?=\d)/g, "$1").replace(/,/g, " "); // 1,200 -> 1200
+    var m = s.match(/-?\d+(?:\.\d+)?/);
+    if (m) { var n = parseFloat(m[0]); if (isFinite(n)) return n; }
+    return wordsToNumber(s);
+  }
+
+  /* ---- field helpers ---- */
+  function isWirable(f) {
+    if (!f || f.dataset.vvWired) return false;
+    if (f.tagName === "TEXTAREA") return !(f.disabled || f.readOnly);
+    if (f.tagName !== "INPUT") return false;
+    var t = (f.getAttribute("type") || "text").toLowerCase();
+    if (t !== "text" && t !== "number") return false;
+    return !(f.disabled || f.readOnly);
+  }
+  function labelFor(f) {
+    var name = "";
+    if (f.id) {
+      var lab = document.querySelector('label[for="' + f.id + '"]');
+      if (lab) name = lab.textContent;
+    }
+    if (!name) {
+      var prev = f.closest ? f.closest("div") : null;
+      var l2 = prev ? prev.querySelector("label") : null;
+      if (l2) name = l2.textContent;
+    }
+    if (!name) name = f.getAttribute("placeholder") || f.getAttribute("name") || "field";
+    return String(name).replace(/\s+/g, " ").trim().slice(0, 60) || "field";
+  }
+  function fireEvents(f) {
+    ["input", "change"].forEach(function (type) {
+      var ev;
+      try { ev = new Event(type, { bubbles: true, composed: true }); }
+      catch (e) { ev = document.createEvent("Event"); ev.initEvent(type, true, true); }
+      f.dispatchEvent(ev);
+    });
+  }
+  function joinText(base, add) {
+    if (!base) return add;
+    if (!add) return base;
+    return base + (/\s$/.test(base) ? "" : " ") + add;
+  }
+
+  /* ---- dictation session ---- */
+  var active = null; // { rec, field, btn, base, finalText, gotResult, done }
+  function stopActive() { if (active && active.rec) { try { active.rec.stop(); } catch (e) {} } }
+  function startDictation(field, btn) {
+    if (active && active.field === field) { stopActive(); return; } // tap again = stop
+    if (active) stopActive();
+    if (!SR) { say(FALLBACK_MSG, 6000); return; }
+    var rec;
+    try { rec = new SR(); } catch (e) { say(FALLBACK_MSG, 6000); return; }
+    var session = { rec: rec, field: field, btn: btn, base: field.value || "", finalText: "", gotResult: false, done: false };
+    active = session;
+    rec.lang = (document.documentElement.getAttribute("lang") || "en-US");
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 1;
+    btn.classList.add("vv-live");
+    btn.setAttribute("aria-label", "Listening — tap to stop");
+    say("Listening… speak now.");
+    rec.onresult = function (ev) {
+      var interim = "", finalT = "";
+      for (var i = ev.resultIndex; i < ev.results.length; i++) {
+        var r = ev.results[i];
+        if (r.isFinal) finalT += r[0].transcript; else interim += r[0].transcript;
+      }
+      if (finalT) { session.finalText = joinText(session.finalText, finalT.trim()); session.gotResult = true; }
+      var shown = joinText(session.finalText, interim.trim());
+      if (field.type !== "number") field.value = joinText(session.base, shown);
+      else if (shown) field.value = shown; // numbers: show the words until they resolve on end
+    };
+    rec.onerror = function (ev) {
+      if (session.done) return;
+      session.done = true;
+      field.value = session.base;
+      cleanup(session);
+      if (ev && (ev.error === "not-allowed" || ev.error === "service-not-allowed")) say(BLOCKED_MSG, 6500);
+      else if (ev && ev.error === "not-supported") say(FALLBACK_MSG, 6000);
+      else say(MISSED_MSG, 5000);
+    };
+    rec.onend = function () {
+      if (session.done) return;
+      session.done = true;
+      cleanup(session);
+      var heard = (session.finalText || "").trim();
+      if (!heard) { field.value = session.base; say(MISSED_MSG, 5000); return; }
+      if (field.type === "number") {
+        var n = parseSpokenNumber(heard);
+        if (n === null || !isFinite(n)) { field.value = session.base; say(MISSED_MSG, 5000); return; }
+        field.value = String(n);
+      } else {
+        field.value = joinText(session.base, heard);
+      }
+      fireEvents(field);
+      try { field.focus({ preventScroll: false }); } catch (e) {}
+      say("Added: " + heard, 3000);
+    };
+    try { rec.start(); } catch (e) { session.done = true; cleanup(session); field.value = session.base; say(MISSED_MSG, 5000); }
+  }
+  function cleanup(session) {
+    if (active === session) active = null;
+    if (session.btn) { session.btn.classList.remove("vv-live"); session.btn.setAttribute("aria-label", session.btn.dataset.vvLabel || "Voice entry"); }
+  }
+
+  /* ---- wiring ---- */
+  function wireField(f) {
+    if (!isWirable(f)) return;
+    f.dataset.vvWired = "1";
+    var wrap = document.createElement("span");
+    wrap.className = "vv-wrap";
+    f.parentNode.insertBefore(wrap, f);
+    wrap.appendChild(f);
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "vv-mic";
+    btn.innerHTML = "🎤";
+    var lab = "Voice entry for " + labelFor(f);
+    btn.dataset.vvLabel = lab;
+    btn.setAttribute("aria-label", lab);
+    btn.title = "Voice entry";
+    btn.addEventListener("click", function () { startDictation(f, btn); });
+    wrap.appendChild(btn);
+  }
+  function scan(root) {
+    if (!root || !root.querySelectorAll) return;
+    var fields = root.querySelectorAll("input, textarea");
+    for (var i = 0; i < fields.length; i++) wireField(fields[i]);
+    if (root.tagName && (root.tagName === "INPUT" || root.tagName === "TEXTAREA")) wireField(root);
+  }
+
+  function init() {
+    scan(document);
+    if (window.MutationObserver && document.body) {
+      var pending = false;
+      var obs = new MutationObserver(function (muts) {
+        var hasAdds = false;
+        for (var i = 0; i < muts.length; i++) if (muts[i].addedNodes.length) { hasAdds = true; break; }
+        if (!hasAdds || pending) return;
+        pending = true;
+        setTimeout(function () { pending = false; scan(document); }, 60);
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+
+  /* exposed for QA harnesses and future Tell flows */
+  window.__vv = { version: "1.0", supported: !!SR, parseSpokenNumber: parseSpokenNumber, fallbackMessage: FALLBACK_MSG, missedMessage: MISSED_MSG };
+})();
+</script>
+</body>
+</html>
