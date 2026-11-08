@@ -435,7 +435,7 @@ function salesToCSV(sales){
 /* =================== END PURE LOGIC =================== */
 
 /* =================== STATE =================== */
-var APP_VERSION = "1.1";
+var APP_VERSION = "1.1.1";
 const STORE_KEY = 'pastureledger_v1';
 let uidCounter = 0;
 function uid(){ uidCounter++; return Date.now().toString(36) + uidCounter.toString(36) + Math.floor(Math.random()*9999).toString(36); }
@@ -1049,10 +1049,10 @@ syncHelpEmail();
     <h2>Legal</h2>
     <p class="ww-accept" id="wwAcceptLine">You have not recorded acceptance of the Terms yet.</p>
     <h3>Terms of Use</h3>
-    <p><strong>Version 1.0 (DRAFT — pending attorney review)</strong> <strong>Seller: White Wolf Tree Service LLC, selling digital products under the name "White Wolf Digital"</strong> <strong>Contact: whitewolfbackoffice@gmail.com</strong></p>
+    <p><strong>Version 1.0 (DRAFT — pending attorney review)</strong> <strong>Seller: White Wolf Apps</strong> <strong>Contact: whitewolfbackoffice@gmail.com</strong></p>
 <hr>
 <h4>1. What you're buying</h4>
-<p>Our apps (including ForgeFit AI, ForgeKitchen, TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, PastureLedger, and the other titles sold under White Wolf Digital) are single-file software tools. When you buy one, you are buying a <strong>license to use the file</strong>, not ownership of the software itself.</p>
+<p>Our apps (including LogEasy, ForgeKitchen, BranchMath, SnowBid, GrimeMath, RoofSquares, ProfitFlag, PastureLedger, and the other titles sold under White Wolf Apps) are single-file software tools. When you buy one, you are buying a <strong>license to use the file</strong>, not ownership of the software itself.</p>
 <h4>2. Your license</h4>
 <ul>
 <li>You may use the app for your own personal or business work.</li>
@@ -1120,10 +1120,10 @@ syncHelpEmail();
 <h4>10. Governing law</h4>
 <p>These terms are governed by the laws of the <strong>State of Oklahoma</strong>, USA. (Attorney to confirm governing law and venue before publication.)</p>
 <h4>11. Contact</h4>
-<p>White Wolf Tree Service LLC (White Wolf Digital) — whitewolfbackoffice@gmail.com.</p>
+<p>White Wolf Apps — whitewolfbackoffice@gmail.com.</p>
 <hr>
 <h4>CONNECTED FEATURES — takes effect only when these features ship</h4>
-<p><em>The sections below apply only to future connected features (device sync via Health Connect, AI voice logging, and the AI Goal Preview in ForgeFit). They do not apply to the current offline versions, which never transmit data.</em></p>
+<p><em>The sections below apply only to future connected features (device sync via Health Connect, AI voice logging, and the AI Goal Preview in LogEasy). They do not apply to the current offline versions, which never transmit data.</em></p>
 <ul>
 <li><strong>Opt-in only.</strong> Connected features are off by default. Each one asks for</li>
 </ul>
@@ -1151,7 +1151,7 @@ syncHelpEmail();
     
     <h3>Privacy</h3>
     <p>This app has no accounts and collects no data. Everything you enter is stored only on your device, in your browser/app storage, and is never uploaded, transmitted, or shared. We never see your data. Files you export (backups, quotes, PDFs) are under your control &mdash; store and send them only where you choose. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, so export backups regularly.</p>
-    <p class="ww-seller">Sold by White Wolf Tree Service LLC (White Wolf Digital) &mdash; whitewolfbackoffice@gmail.com</p>
+    <p class="ww-seller">Sold by White Wolf Apps &mdash; whitewolfbackoffice@gmail.com</p>
   </div>
 </div>
 
@@ -1365,10 +1365,43 @@ if(document.readyState === "loading") document.addEventListener("DOMContentLoade
       var lab = document.querySelector('label[for="' + f.id + '"]');
       if (lab) name = lab.textContent;
     }
+    if (!name && f.closest) {
+      var wrapLab = f.closest("label");
+      if (wrapLab) name = wrapLab.textContent;
+    }
+    if (!name && f.closest) {
+      var td = f.closest("td");
+      if (td && td.parentNode) {
+        var cellIdx = 0, sib = td;
+        while ((sib = sib.previousElementSibling)) cellIdx++;
+        var tbl = f.closest("table");
+        var hrow = tbl ? tbl.querySelector("tr") : null;
+        var hcell = hrow ? hrow.children[cellIdx] : null;
+        if (hcell && hcell.tagName === "TH" && hcell.textContent && hcell.textContent.trim()) name = hcell.textContent;
+      }
+    }
     if (!name) {
-      var prev = f.closest ? f.closest("div") : null;
-      var l2 = prev ? prev.querySelector("label") : null;
-      if (l2) name = l2.textContent;
+      var node = f.parentNode, depth = 0;
+      while (node && depth < 4 && !name) {
+        if (node.querySelectorAll) {
+          var labs = node.querySelectorAll("label");
+          if (labs.length) {
+            var fields = 0, all = node.querySelectorAll("input, textarea");
+            for (var i = 0; i < all.length; i++) {
+              var t = (all[i].getAttribute("type") || "text").toLowerCase();
+              if (all[i].tagName === "TEXTAREA" || t === "text" || t === "number") fields++;
+            }
+            if (fields === 1) name = labs[0].textContent;
+            else {
+              var pv = f.previousElementSibling;
+              if ((!pv || pv.tagName !== "LABEL") && f.parentNode) pv = f.parentNode.previousElementSibling;
+              if (pv && pv.tagName === "LABEL") name = pv.textContent;
+            }
+            if (!name) break;
+          }
+        }
+        node = node.parentNode; depth++;
+      }
     }
     if (!name) name = f.getAttribute("placeholder") || f.getAttribute("name") || "field";
     return String(name).replace(/\s+/g, " ").trim().slice(0, 60) || "field";
