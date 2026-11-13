@@ -78,6 +78,43 @@
     .panel,.card{border:none;padding:4px 0}
   }
 </style>
+<style>
+/* ===== PastureLedger v1.2.0: modern app-look redesign (BirdTally pattern, pasture-green palette) ===== */
+:root{--bar-h:64px;--shadow:0 2px 6px rgba(36,48,32,.07),0 10px 26px rgba(36,48,32,.08)}
+body{padding-bottom:calc(var(--bar-h) + env(safe-area-inset-bottom) + 20px)}
+header{position:sticky;top:0;z-index:40;background:linear-gradient(135deg,#223d27,var(--green-d) 55%,var(--green));box-shadow:0 2px 12px rgba(43,76,49,.35)}
+header .brand{display:flex;align-items:center;gap:11px}
+header .brand::before{content:"\1F404";flex:0 0 auto;width:50px;height:50px;border-radius:15px;background:linear-gradient(145deg,#e8a13a,var(--accent));display:flex;align-items:center;justify-content:center;font-size:27px;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 3px 8px rgba(0,0,0,.25)}
+nav#tabBar{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;flex-wrap:nowrap;gap:2px;background:rgba(255,255,255,.97);border-top:1px solid var(--line);border-bottom:none;box-shadow:0 -3px 16px rgba(36,48,32,.12);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+#tabBar button{flex:1;background:none;border:none;color:var(--muted);padding:4px 0 5px;border-radius:14px;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700}
+#tabBar button:hover{background:rgba(56,102,65,.06)}
+#tabBar button .ic{font-size:21px;line-height:1.15;padding:3px 11px;border-radius:999px;transition:background .15s}
+#tabBar button .lb{font-size:11px;letter-spacing:.1px;white-space:nowrap}
+#tabBar button.active{background:none;color:var(--green-d)}
+#tabBar button.active .ic{background:#e8a13a;box-shadow:0 2px 6px rgba(232,161,58,.5)}
+.view.active{animation:tabIn .28s ease both}
+@keyframes tabIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card,.panel,.groupcard{border-radius:16px;box-shadow:var(--shadow)}
+.btn,.btn-ghost,.btn-danger{border-radius:999px;min-height:48px;padding:10px 18px}
+.btn-small{min-height:44px;border-radius:999px}
+button{transition:background .15s,transform .1s}
+button:active{transform:scale(.98)}
+input,select,textarea{border-radius:12px}
+.chip{border-radius:999px}
+.banner{border-radius:16px}
+.helpTopics details{border-radius:16px;box-shadow:var(--shadow)}
+.modal{border-radius:20px;box-shadow:0 18px 44px rgba(0,0,0,.3)}
+.modal-overlay{z-index:80}
+/* welcome-screen terms gate (shared WW legal pattern, restyled) */
+body #wwLegalOverlay{background:rgba(34,61,39,.72)}
+#wwLegalOverlay .ww-card{border-radius:22px;padding:26px 20px 22px;box-shadow:0 18px 44px rgba(0,0,0,.35)}
+#wwLegalOverlay .ww-card::before{content:"\1F404";display:block;text-align:center;font-size:66px;line-height:1.1}
+#wwLegalOverlay .ww-appname{text-align:center;font-size:26px;letter-spacing:0;text-transform:none;color:#2b4c31;font-weight:800;margin-top:2px}
+#wwLegalOverlay .ww-appname::after{content:"Welcome! Simple records for your herd, your money, and tax time.";display:block;font-size:15px;font-weight:600;color:#6d7462;text-transform:none;letter-spacing:0;margin-top:4px}
+#wwLegalOverlay .ww-btn{border-radius:999px}
+#wwLegalOverlay .ww-btn.ww-primary{background:#386641;border-color:#386641;min-height:56px;font-size:17px}
+@media print{#tabBar{display:none !important}body{padding-bottom:0}}
+</style>
 </head>
 <body>
 <header>
@@ -94,13 +131,13 @@
 
 
 <nav id="tabBar">
-  <button data-view="dashboard" class="active">Dashboard</button>
-  <button data-view="livestock">Livestock</button>
-  <button data-view="money">Money Log</button>
-  <button data-view="sales">Sales</button>
-  <button data-view="schedulef">Schedule F</button>
-  <button data-view="settings">Settings</button>
-  <button data-view="help">Help</button>
+  <button data-view="dashboard" class="active"><span class="ic">&#x1F3E0;</span><span class="lb">Dashboard</span></button>
+  <button data-view="livestock"><span class="ic">&#x1F404;</span><span class="lb">Livestock</span></button>
+  <button data-view="money"><span class="ic">&#x1F4B0;</span><span class="lb">Money Log</span></button>
+  <button data-view="sales"><span class="ic">&#x1F9FE;</span><span class="lb">Sales</span></button>
+  <button data-view="schedulef"><span class="ic">&#x1F4CB;</span><span class="lb">Schedule F</span></button>
+  <button data-view="settings"><span class="ic">&#x2699;&#xFE0F;</span><span class="lb">Settings</span></button>
+  <button data-view="help"><span class="ic">&#x2753;</span><span class="lb">Help</span></button>
 </nav>
 
 <main>
@@ -274,9 +311,9 @@
       <h3 style="margin-top:0">Your data stays on this device</h3>
       <p>Your records live in this browser on this device (localStorage) — nothing is uploaded anywhere. Back them up regularly: in <b>Settings</b>, tap <b>Download backup (JSON)</b>, and import that same file in Settings if you move to a new device or browser.</p>
       <h3>Email us for help</h3>
-      <p><a id="helpEmailBtn" class="btn" href="mailto:whitewolfbackoffice@gmail.com?subject=PastureLedger%20help%20%E2%80%94%20v1.1&amp;body=Tell%20us%20what%20you%20were%20trying%20to%20do%20and%20what%20happened%3A%0A%0A">✉️ Email us</a></p>
+      <p><a id="helpEmailBtn" class="btn" href="mailto:whitewolfbackoffice@gmail.com?subject=PastureLedger%20help%20%E2%80%94%20v1.2.0&amp;body=Tell%20us%20what%20you%20were%20trying%20to%20do%20and%20what%20happened%3A%0A%0A">✉️ Email us</a></p>
       <p class="muted">The button opens your own mail app with our address and the app version already filled in — nothing is sent until you press send there.</p>
-      <p class="muted" id="helpVersionLine">PastureLedger v1.1</p>
+      <p class="muted" id="helpVersionLine">PastureLedger v1.2.0</p>
     </div>
   </section>
 </main>
@@ -435,7 +472,7 @@ function salesToCSV(sales){
 /* =================== END PURE LOGIC =================== */
 
 /* =================== STATE =================== */
-var APP_VERSION = "1.1.1";
+var APP_VERSION = "1.2.0";
 const STORE_KEY = 'pastureledger_v1';
 let uidCounter = 0;
 function uid(){ uidCounter++; return Date.now().toString(36) + uidCounter.toString(36) + Math.floor(Math.random()*9999).toString(36); }
